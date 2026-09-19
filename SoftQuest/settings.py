@@ -39,6 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # aqui van librerias 
     # aqui van las apps del proyecto
+    'actividades', # app que tiene qu ver con todos los minijuegos
+    'contenido', # exploracion de mundos y temarios
 ]
 
 MIDDLEWARE = [
