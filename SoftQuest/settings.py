@@ -11,9 +11,26 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 from pathlib import Path
+import os
+from urllib.parse import urlsplit
+
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+env_file = BASE_DIR / 'env.txt'
+if env_file.exists():
+    env_bytes = env_file.read_bytes()
+    try:
+        env_text = env_bytes.decode('utf-16')
+    except UnicodeDecodeError:
+        env_text = env_bytes.decode('utf-8-sig')
+    for env_line in env_text.splitlines():
+        env_line = env_line.strip()
+        if env_line and not env_line.startswith('#') and '=' in env_line:
+            env_name, env_value = env_line.split('=', 1)
+            os.environ.setdefault(env_name.strip(), env_value.strip())
 
 
 # Quick-start development settings - unsuitable for production
@@ -25,7 +42,8 @@ SECRET_KEY = 'django-insecure-bxw7rg@b5^3r!e3y%cb#^!6nfwhta)u38dfu*dj6sz^fvt88@9
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
+
 
 
 # Application definition
@@ -78,11 +96,24 @@ WSGI_APPLICATION = 'SoftQuest.wsgi.application'
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {
+    'default': dj_database_url.config(
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
+}
+
+if not DATABASES['default']:
+    DATABASES['default'] = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
-}
+elif 'NUEVA_CONTRASEÑA' in os.environ.get('DATABASE_URL', ''):
+    database_parts = urlsplit(os.environ['DATABASE_URL'])
+    DATABASES['default']['PASSWORD'] = os.environ.get('PGPASSWORD', '')
+    DATABASES['default']['HOST'] = database_parts.hostname
+    DATABASES['default']['USER'] = database_parts.username
+    DATABASES['default']['NAME'] = database_parts.path.lstrip('/')
+    DATABASES['default']['OPTIONS'] = {'sslmode': 'require'}
 
 
 # Password validation
@@ -120,6 +151,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [
+    BASE_DIR / 'templates' / 'styles',
+]
+
 
 
 # Email
