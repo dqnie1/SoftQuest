@@ -171,7 +171,7 @@ class Par(models.Model):
     @staticmethod
     def todos_los_pares(id_memorama=None):
         if id_memorama is None:
-            return []
+            return [] # regresa una lista nula si no se especifica el id memoama
         return list(Par.objects.filter(memorama_id=id_memorama))
 
     @property

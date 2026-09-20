@@ -57,6 +57,14 @@
             const totalPares = {{ pares|length|default:0 }};
             const idActividad = {{ id_memorama|default:"null" }};
 
+            for (let indice = rawCartas.length - 1; indice > 0; indice--) {
+                const posicionAleatoria = Math.floor(Math.random() * (indice + 1));
+                [rawCartas[indice], rawCartas[posicionAleatoria]] = [
+                    rawCartas[posicionAleatoria],
+                    rawCartas[indice]
+                ];
+            }
+
             // Flujo Excepción 1.0: Muestra mensaje de que no se pudo recuperar las cartas
             if (!rawCartas.length) {
                 const tablero = document.getElementById('tablero');
