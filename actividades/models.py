@@ -168,6 +168,19 @@ class Par(models.Model):
     def __str__(self):
         return f"{self.elemento_a} <-> {self.elemento_b}"
 
+    @staticmethod
+    def todos_los_pares(id_memorama=None):
+        if id_memorama is None:
+            return []
+        return list(Par.objects.filter(memorama_id=id_memorama))
+
+    @property
+    def parteA(self):
+        return self.elemento_a
+
+    @property
+    def parteB(self):
+        return self.elemento_b
 
 # ---------------------------------------------------------------------------
 # Usuario y progreso
