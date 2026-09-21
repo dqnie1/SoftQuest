@@ -21,6 +21,6 @@ from django.shortcuts import redirect
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', lambda request: redirect('memorama')),
-    path('actividad/', include('actividades.urls')), # urls de app actividades
+    path('', include('minijuegos.memorama.urls')),  # urls del minijuego memorama
 ]
 

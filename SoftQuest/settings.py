@@ -57,7 +57,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # aqui van librerias 
     # aqui van las apps del proyecto
-    'actividades', # app que tiene qu ver con todos los minijuegos
+    'minijuegos.memorama',
+    'minijuegos.trivia',
+    'minijuegos.match',
     'contenido', # exploracion de mundos y temarios
 ]
 
@@ -77,7 +79,11 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         # Ruta de la carpeta de los templates
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [
+            BASE_DIR / 'minijuegos' / 'memorama' / 'template',
+            BASE_DIR / 'minijuegos' / 'trivia' / 'template',
+            BASE_DIR / 'minijuegos' / 'match' / 'template',
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -150,9 +156,10 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATICFILES_DIRS = [
-    BASE_DIR / 'templates' / 'styles',
+    #squi van las urls de los archivos de estilos
+    BASE_DIR / 'minijuegos' / 'memorama' / 'template' / 'style',
 ]
 
 
