@@ -30,6 +30,16 @@ class Pregunta(models.Model):
     def __str__(self):
         return self.texto
 
+    @staticmethod
+    def todas_las_preguntas(id_trivia=None):
+        if id_trivia is None:
+            return []
+        return list(
+            Pregunta.objects.filter(trivia_id=id_trivia)
+            .prefetch_related('respuestas')
+            .order_by('id')
+        )
+
 
 class Respuesta(models.Model):
     id = models.AutoField(primary_key=True)
