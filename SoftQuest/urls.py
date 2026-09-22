@@ -22,5 +22,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', lambda request: redirect('memorama')),
     path('', include('minijuegos.memorama.urls')),  # urls del minijuego memorama
+    path('', include('minijuegos.trivia.urls')),  # urls del minijuego trivia
 ]
 
