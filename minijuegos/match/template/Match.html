@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'MatchStyle.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Sora:wght@700;800&display=swap" rel="stylesheet">
+    <title>{{ mundo|default:"SoftQuest" }} · Match</title>
+</head>
+<body>
+    <main class="contenedor">
+        <header class="barra">
+            <div>
+                <p class="barra__mundo">{{ mundo|default:"Mundo 1" }}</p>
+                <p class="barra__materia">SoftQuest · Match</p>
+            </div>
+            <dl class="barra__stats">
+                <div class="stat">
+                    <dt>Parejas</dt>
+                    <dd id="stat-parejas">0/{{ conceptos|length|default:0 }}</dd>
+                </div>
+                <div class="stat">
+                    <dt>Aciertos</dt>
+                    <dd id="stat-aciertos">0</dd>
+                </div>
+            </dl>
+        </header>
+
+        <section class="intro">
+            <h1 class="intro__titulo">Empareja cada concepto</h1>
+            <p class="intro__texto">Selecciona un término y después su definición correspondiente para unirlos.</p>
+        </section>
+
+        {% if hay_conceptos %}
+        <section class="match" id="match">
+            <svg class="match__lineas" id="lineas"></svg>
+
+            <div class="match__columna" id="columna-terminos">
+                <!-- Términos generados dinámicamente -->
+            </div>
+
+            <div class="match__columna" id="columna-definiciones">
+                <!-- Definiciones generadas dinámicamente -->
+            </div>
+        </section>
+
+        <div class="match__acciones">
+            <button class="boton boton--fantasma" id="btn-limpiar" type="button">Limpiar</button>
+            <button class="boton" id="btn-validar" type="button" disabled>Validar</button>
+        </div>
+
+        <dialog class="resultados" id="modal-resultados">
+            <h2 class="resultados__titulo" id="resultados-titulo">Resultado de tus respuestas</h2>
+            <p class="resultados__marcador" id="resultados-marcador">0%</p>
+            <ul class="resultados__lista" id="resultados-lista"></ul>
+            <div class="resultados__acciones">
+                <button class="boton boton--fantasma" id="btn-reintentar" type="button">Reintentar</button>
+                <button class="boton" id="btn-continuar" type="button">Continuar</button>
+            </div>
+        </dialog>
+
+        <dialog class="fin" id="modal-fin">
+            <h2 class="fin__titulo">¡Todo correcto! 🎉</h2>
+            <p class="fin__resumen" id="fin-resumen">Emparejaste todos los conceptos.</p>
+            <button class="boton" onclick="location.reload()">Jugar de nuevo</button>
+        </dialog>
+
+        <script>
+            const csrfToken = '{{ csrf_token }}';
+            const idMatch = {{ id_match|default:"null" }};
+
+            const rawTerminos = [
+                {% for concepto in conceptos %}
+                { conceptoId: {{ concepto.id }}, texto: "{{ concepto.termino|escapejs }}" },
+                {% endfor %}
+            ];
+            const rawDefiniciones = [
+                {% for concepto in conceptos %}
+                { conceptoId: {{ concepto.id }}, texto: "{{ concepto.definicion|escapejs }}" },
+                {% endfor %}
+            ];
+
+            const totalConceptos = rawTerminos.length;
+
+            function revolver(arreglo) {
+                for (let i = arreglo.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [arreglo[i], arreglo[j]] = [arreglo[j], arreglo[i]];
+                }
+                return arreglo;
+            }
+            revolver(rawDefiniciones);
+
+            const columnaTerminos = document.getElementById('columna-terminos');
+            const columnaDefiniciones = document.getElementById('columna-definiciones');
+            const svgLineas = document.getElementById('lineas');
+            const matchSection = document.getElementById('match');
+            const statParejas = document.getElementById('stat-parejas');
+            const statAciertos = document.getElementById('stat-aciertos');
+            const btnValidar = document.getElementById('btn-validar');
+            const btnLimpiar = document.getElementById('btn-limpiar');
+            const modalResultados = document.getElementById('modal-resultados');
+            const resultadosTitulo = document.getElementById('resultados-titulo');
+            const resultadosMarcador = document.getElementById('resultados-marcador');
+            const resultadosLista = document.getElementById('resultados-lista');
+            const btnReintentar = document.getElementById('btn-reintentar');
+            const btnContinuar = document.getElementById('btn-continuar');
+            const modalFin = document.getElementById('modal-fin');
+            const finResumen = document.getElementById('fin-resumen');
+
+            let terminoSeleccionado = null;
+            let parejas = {};
+
+            if (!totalConceptos) {
+                matchSection.innerHTML = '<div class="error-carga">No se pudieron recuperar las preguntas.</div>';
+            }
+
+            rawTerminos.forEach((dato) => {
+                const item = document.createElement('button');
+                item.className = 'ficha ficha--termino';
+                item.id = `termino-${dato.conceptoId}`;
+                item.dataset.conceptoId = dato.conceptoId;
+                item.textContent = dato.texto;
+                item.addEventListener('click', () => seleccionarTermino(item));
+                columnaTerminos.appendChild(item);
+            });
+
+            rawDefiniciones.forEach((dato) => {
+                const item = document.createElement('button');
+                item.className = 'ficha ficha--definicion';
+                item.id = `definicion-${dato.conceptoId}`;
+                item.dataset.conceptoId = dato.conceptoId;
+                item.textContent = dato.texto;
+                item.addEventListener('click', () => seleccionarDefinicion(item));
+                columnaDefiniciones.appendChild(item);
+            });
+
+            function seleccionarTermino(item) {
+                if (item.classList.contains('is-pareada')) {
+                    quitarPareja(item.dataset.conceptoId);
+                    return;
+                }
+                if (terminoSeleccionado) {
+                    terminoSeleccionado.classList.remove('is-seleccionada');
+                }
+                terminoSeleccionado = item;
+                item.classList.add('is-seleccionada');
+            }
+
+            function seleccionarDefinicion(item) {
+                if (!terminoSeleccionado) return;
+                if (item.classList.contains('is-pareada')) {
+                    quitarPareja(item.dataset.conceptoId);
+                }
+
+                const terminoId = terminoSeleccionado.dataset.conceptoId;
+                const definicionId = item.dataset.conceptoId;
+
+                parejas[terminoId] = definicionId;
+                terminoSeleccionado.classList.remove('is-seleccionada');
+                terminoSeleccionado.classList.add('is-pareada');
+                item.classList.add('is-pareada');
+                terminoSeleccionado = null;
+
+                dibujarLineas();
+                actualizarEstado();
+            }
+
+            function quitarPareja(conceptoId) {
+                const terminoId = Object.keys(parejas).find(
+                    (t) => t === String(conceptoId) || parejas[t] === String(conceptoId)
+                );
+                if (!terminoId) return;
+                const definicionId = parejas[terminoId];
+                document.getElementById(`termino-${terminoId}`)?.classList.remove('is-pareada', 'is-correcta', 'is-incorrecta');
+                document.getElementById(`definicion-${definicionId}`)?.classList.remove('is-pareada', 'is-correcta', 'is-incorrecta');
+                delete parejas[terminoId];
+                dibujarLineas();
+                actualizarEstado();
+            }
+
+            function actualizarEstado() {
+                const totalPareadas = Object.keys(parejas).length;
+                statParejas.textContent = `${totalPareadas}/${totalConceptos}`;
+                btnValidar.disabled = totalPareadas !== totalConceptos;
+            }
+
+            function dibujarLineas() {
+                svgLineas.innerHTML = '';
+                const areaRect = matchSection.getBoundingClientRect();
+
+                Object.entries(parejas).forEach(([terminoId, definicionId]) => {
+                    const origen = document.getElementById(`termino-${terminoId}`);
+                    const destino = document.getElementById(`definicion-${definicionId}`);
+                    if (!origen || !destino) return;
+
+                    const rOrigen = origen.getBoundingClientRect();
+                    const rDestino = destino.getBoundingClientRect();
+
+                    const x1 = rOrigen.right - areaRect.left;
+                    const y1 = rOrigen.top + rOrigen.height / 2 - areaRect.top;
+                    const x2 = rDestino.left - areaRect.left;
+                    const y2 = rDestino.top + rDestino.height / 2 - areaRect.top;
+                    const xMedio = (x1 + x2) / 2;
+
+                    const linea = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    linea.setAttribute(
+                        'd',
+                        `M ${x1} ${y1} C ${xMedio} ${y1}, ${xMedio} ${y2}, ${x2} ${y2}`
+                    );
+                    linea.setAttribute('class', `linea linea--${origen.classList.contains('is-correcta') ? 'correcta' : origen.classList.contains('is-incorrecta') ? 'incorrecta' : 'activa'}`);
+                    linea.dataset.terminoId = terminoId;
+                    svgLineas.appendChild(linea);
+                });
+            }
+
+            window.addEventListener('resize', dibujarLineas);
+
+            btnLimpiar.addEventListener('click', () => {
+                Object.keys({ ...parejas }).forEach((terminoId) => quitarPareja(terminoId));
+            });
+
+            btnValidar.addEventListener('click', () => {
+                const listaParejas = Object.entries(parejas).map(([terminoId, definicionId]) => ({
+                    termino_id: Number(terminoId),
+                    definicion_id: Number(definicionId),
+                }));
+
+                fetch('{% url "validar_match" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken,
+                    },
+                    body: JSON.stringify({ id_match: idMatch, parejas: listaParejas }),
+                })
+                    .then((response) => response.json())
+                    .then(mostrarResultados)
+                    .catch((error) => console.error('Error al validar match:', error));
+            });
+
+            function mostrarResultados(data) {
+                resultadosLista.innerHTML = '';
+                data.detalles.forEach((detalle) => {
+                    const termino = document.getElementById(`termino-${detalle.termino_id}`);
+                    const definicion = document.getElementById(`definicion-${detalle.definicion_id}`);
+                    const clase = detalle.correcta ? 'is-correcta' : 'is-incorrecta';
+                    termino?.classList.remove('is-pareada');
+                    definicion?.classList.remove('is-pareada');
+                    termino?.classList.add(clase);
+                    definicion?.classList.add(clase);
+
+                    const li = document.createElement('li');
+                    li.className = `resultados__item ${detalle.correcta ? 'resultados__item--correcta' : 'resultados__item--incorrecta'}`;
+                    li.innerHTML = `<span class="resultados__icono">${detalle.correcta ? '✓' : '✕'}</span>
+                        <span>${termino ? termino.textContent : ''} → ${definicion ? definicion.textContent : ''}</span>`;
+                    resultadosLista.appendChild(li);
+                });
+
+                dibujarLineas();
+                statAciertos.textContent = data.aciertos;
+                resultadosMarcador.textContent = `${data.porcentaje}%`;
+                resultadosTitulo.textContent = data.completado ? '¡Todo correcto!' : 'Casi lo tienes';
+                btnContinuar.hidden = !data.completado;
+                btnReintentar.hidden = data.completado;
+                modalResultados.showModal();
+            }
+
+            btnReintentar.addEventListener('click', () => {
+                modalResultados.close();
+                Object.entries(parejas).forEach(([terminoId, definicionId]) => {
+                    const termino = document.getElementById(`termino-${terminoId}`);
+                    const definicion = document.getElementById(`definicion-${definicionId}`);
+                    if (termino?.classList.contains('is-correcta')) return;
+                    termino?.classList.remove('is-pareada', 'is-incorrecta');
+                    definicion?.classList.remove('is-pareada', 'is-incorrecta');
+                    delete parejas[terminoId];
+                });
+                dibujarLineas();
+                actualizarEstado();
+            });
+
+btnContinuar.addEventListener('click', () => {
+    modalResultados.close();
+    fetch('{% url "guardar_progreso" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+        },
+        body: JSON.stringify({
+            id_actividad: idMatch,
+            intentos: totalConceptos,
+        }),
+    })
+        .then((response) => response.json())
+        .then(() => {
+            finResumen.textContent = `Emparejaste ${totalConceptos} de ${totalConceptos} conceptos.`;
+            modalFin.showModal();
+        })
+        .catch((error) => {
+            console.error('Error al guardar progreso:', error);
+            finResumen.textContent = `Emparejaste ${totalConceptos} de ${totalConceptos} conceptos.`;
+            modalFin.showModal();
+        });
+});
+        </script>
+        {% else %}
+        <section class="estado-vacio">
+            <h2 class="estado-vacio__titulo">No se pudieron recuperar las preguntas</h2>
+            <p class="estado-vacio__texto">No fue posible recuperar los conceptos del match desde el servidor.</p>
+            <button class="boton boton--peligro" onclick="location.reload()">Reintentar</button>
+        </section>
+        {% endif %}
+    </main>
+</body>
+</html>

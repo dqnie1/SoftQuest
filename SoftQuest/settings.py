@@ -160,6 +160,7 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     #squi van las urls de los archivos de estilos
     BASE_DIR / 'minijuegos' / 'memorama' / 'template' / 'style',
+    BASE_DIR / 'minijuegos' / 'match' / 'template' / 'style',
 ]
 
 
