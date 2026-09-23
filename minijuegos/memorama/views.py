@@ -5,6 +5,7 @@ from django.shortcuts import render
 from django.views.decorators.http import require_POST
 
 from contenido.models import Actividad, ProgresoActividad, Usuario
+from contenido.operaciones.OperacionesContenido import OperacionesContenido
 from .models import Par
 from .operaciones.OperacionesMemorama import OperacionesMemorama
 
@@ -42,11 +43,8 @@ def guardar_progreso(request):
     except (TypeError, ValueError, KeyError, json.JSONDecodeError):
         return JsonResponse({'guardado': False, 'error': 'Datos invalidos'}, status=400)
 
-    usuario = None
-    if request.user.is_authenticated:
-        usuario = Usuario.objects.filter(email=request.user.email).first()
-        if usuario is None:
-            usuario = Usuario.objects.filter(pk=request.user.id).first()
+    # solo para la demo
+    usuario = OperacionesContenido().obtener_usuario(request)
 
     if usuario is None:
         return JsonResponse(
@@ -62,6 +60,7 @@ def guardar_progreso(request):
             defaults={
                 'estado': 'completado',
                 'intentos': intentos,
+                'puntaje': 100
             },
         )
     except Actividad.DoesNotExist:

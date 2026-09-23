@@ -154,7 +154,7 @@
                 const parAId = primeraCarta.dataset.parId;
                 const parBId = segundaCarta.dataset.parId;
 
-                fetch('{% url "validar_par" %}', {
+                fetch('{% url "memorama:validar_par" %}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -214,7 +214,7 @@
 
             // Paso 20: guardarProgresoActividad(id_actividad, usuario)
             function finalizarActividad() {
-                fetch('{% url "guardar_progreso" %}', {
+                fetch('{% url "memorama:guardar_progreso" %}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

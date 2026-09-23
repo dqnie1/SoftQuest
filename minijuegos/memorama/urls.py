@@ -1,6 +1,8 @@
 from django.urls import path
 from . import views
 
+app_name = 'memorama'
+
 # aqui van las URLS de toda la app de actividades
 urlpatterns = [
 	# Abre el memorama general con todos los pares disponibles.
