@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'TemarioStyle.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Sora:wght@700;800&display=swap" rel="stylesheet">
+    <title>SoftQuest · Temario</title>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="user-profile">
+            <div class="avatar">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </div>
+            <div class="user-info">
+                <h3>{{ usuario.nombre }}</h3>
+                <p>IS · Nivel {{ mundo.orden }}</p>
+            </div>
+        </div>
+
+        <div class="stats-card score-card">
+            <h4>Score</h4>
+            <div class="score">{{ score|default:"0" }}</div>
+            <p>puntos totales</p>
+        </div>
+
+        <div class="stats-box blue">
+            <div>
+                <h4>Insignias</h4>
+                <p>0 obtenidas</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="topbar">
+            <div class="logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary-color); fill:var(--primary-color)"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                SoftQuest
+            </div>
+            <div class="progress-section">
+                <span class="progress-label">PROGRESO</span>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" style="width: {% widthratio actividades_completadas total_actividades|default:1 100 %}%;"></div>
+                </div>
+                <div class="progress-badge" style="width:auto; padding:0 8px;">{{ actividades_completadas }}/{{ total_actividades }}</div>
+            </div>
+        </header>
+
+        <div class="content-wrapper">
+            <a href="{% url 'mapa_mundos' %}" class="volver-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"></path></svg>
+                Volver al mapa
+            </a>
+
+            <div class="temario-header">
+                <h1>{{ mundo.nombre }}</h1>
+            </div>
+
+            <div class="layout-grid">
+                <!-- Columna Izquierda: Actividades -->
+                <div class="lista-actividades">
+                    <h3>Actividades que componen el mundo</h3>
+                    
+                    {% for act in actividades %}
+                        {% if act.estado == 'bloqueado' %}
+                            <div class="actividad-item bloqueado" onclick="showActModal('{{ act.titulo|escapejs }}', '{{ act.tipo_display|default:act.tipo|escapejs|upper }}', {{ act.puntos_max|default:0 }}, true, '', 'bloqueado', 0)">
+                                <div class="act-izq">
+                                    <div class="act-icono">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                    </div>
+                                    <div class="act-titulo">{{ act.titulo }}</div>
+                                </div>
+                                <div class="act-der">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                </div>
+                            </div>
+                        {% elif act.estado == 'completado' %}
+                            <div class="actividad-item completado" onclick="showActModal('{{ act.titulo|escapejs }}', '{{ act.tipo_display|default:act.tipo|escapejs|upper }}', {{ act.puntos_max|default:0 }}, false, '{{ act.url|default:''|escapejs }}', 'completado', {{ act.puntaje_obtenido|default:0 }})">
+                                <div class="act-izq">
+                                    <div class="act-icono">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                    </div>
+                                    <div class="act-titulo">{{ act.titulo }}</div>
+                                </div>
+                                <div class="act-der">
+                                    Puntaje: {{ act.puntaje_obtenido }} / {{ act.puntos_max }}
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="actividad-item" onclick="showActModal('{{ act.titulo|escapejs }}', '{{ act.tipo_display|default:act.tipo|escapejs|upper }}', {{ act.puntos_max|default:0 }}, false, '{{ act.url|default:''|escapejs }}', 'desbloqueado', 0)">
+                                <div class="act-izq">
+                                    <div class="act-icono">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                                    </div>
+                                    <div class="act-titulo">{{ act.titulo }}</div>
+                                </div>
+                                <div class="act-der">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <!-- Columna Derecha: Recompensas y Beneficios -->
+                <div class="panel-lateral">
+                    <div class="card-panel">
+                        <h4>Recompensas Finales</h4>
+                        <div class="recompensa-item">
+                            <div class="rec-icono xp"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></div>
+                            <div class="rec-info"><p>Total Max XP</p><span>{{ xp_maximo }} XP</span></div>
+                        </div>
+                        <div class="recompensa-item">
+                            <div class="rec-icono insignia"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15l-2 5l9-9H2L12 15z"></path></svg></div>
+                            <div class="rec-info"><p>Insignia</p><span>Sin insignia</span></div>
+                        </div>
+                        <div class="recompensa-item">
+                            <div class="rec-icono unlock"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></div>
+                            <div class="rec-info"><p>Desbloquea</p><span style="color:var(--green-success);">Siguiente Mundo</span></div>
+                        </div>
+                    </div>
+
+                    <div class="card-panel">
+                        <h4>Resumen de Beneficios</h4>
+                        <div class="beneficio-row">
+                            <span>Total actividades</span>
+                            <span class="bold">{{ total_actividades }}</span>
+                        </div>
+                        <div class="beneficio-row">
+                            <span>Completadas</span>
+                            <span class="green">{{ actividades_completadas }}</span>
+                        </div>
+                        <div class="beneficio-row">
+                            <span>Bloqueadas</span>
+                            <span class="bold" style="color: #94a3b8;">{{ actividades_bloqueadas }}</span>
+                        </div>
+                        <div class="beneficio-row total">
+                            <span>XP Acumulado</span>
+                            <span class="orange">{{ xp_acumulado }} XP</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Detalles de Actividad -->
+    <div class="modal-overlay" id="actModal" onclick="handleOverlayClick(event, 'actModal')">
+        <div class="modal-content">
+            <div class="modal-header blue" id="actModalHeader">
+                <button class="modal-close" onclick="closeModal('actModal')" aria-label="Cerrar">&times;</button>
+                <div class="modal-icon-top" id="actModalIcon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                </div>
+                <h4 style="text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;" id="actTipo">TIPO</h4>
+                <h2 style="text-align: left; margin-top: 0.5rem; font-size: 1.5rem;" id="actTitulo">Título de Actividad</h2>
+            </div>
+            <div class="modal-body" style="text-align: center; padding: 2rem;">
+                
+                <h3 style="font-size: 1.1rem; color: var(--text-dark); margin-bottom: 0.25rem;">Recompensa Máxima</h3>
+                <div style="font-size: 2.2rem; color: #f59e0b; font-family: var(--font-heading); margin-bottom: 1.5rem;">
+                    <span id="actXp">0</span> XP
+                </div>
+                
+                <div id="actScoreContainer" style="display: none; margin-bottom: 1.5rem; padding: 0.75rem; background: #ecfdf5; border-radius: 8px; color: #065f46; font-size: 0.95rem; font-weight: 600;">
+                    Puntaje obtenido: <span id="actPuntajeObtenido">0 XP</span>
+                </div>
+                
+                <button class="btn-primary" id="actBtn">Comenzar actividad</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Excepcion (Error Conexión) -->
+    <div class="modal-overlay" id="errorModal" onclick="handleOverlayClick(event, 'errorModal')">
+        <div class="modal-content">
+            <div class="modal-header white" style="padding-top: 3.5rem;">
+                <button class="modal-close" onclick="closeModal('errorModal')" aria-label="Cerrar">&times;</button>
+                <div class="modal-icon-top danger">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                </div>
+                <h2 style="text-align: center; color: var(--text-dark);">Error de Conexión</h2>
+            </div>
+            <div class="modal-body" style="padding-top: 0;">
+                <p style="color: var(--text-muted); margin-bottom: 1.5rem; line-height: 1.5;">El temario no está disponible en este momento. Verifica tu conexión a internet e inténtalo de nuevo.</p>
+                <button class="btn-danger" onclick="location.href='{% url 'mapa_mundos' %}'">Regresar al Mapa</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showActModal(titulo, tipo, xp, isBloqueado, url, estado, puntaje) {
+            document.getElementById('actTitulo').textContent = titulo;
+            document.getElementById('actTipo').textContent = tipo || 'ACTIVIDAD';
+            document.getElementById('actXp').textContent = xp;
+            
+            const btn = document.getElementById('actBtn');
+            const header = document.getElementById('actModalHeader');
+            const icon = document.getElementById('actModalIcon');
+            const scoreContainer = document.getElementById('actScoreContainer');
+            
+            if (isBloqueado) {
+                btn.className = 'btn-disabled';
+                btn.textContent = 'Actividad bloqueada';
+                btn.onclick = function() { closeModal('actModal'); };
+                
+                header.className = 'modal-header white';
+                header.style.paddingTop = '3.5rem';
+                header.querySelector('h4').style.color = 'var(--text-muted)';
+                header.querySelector('h2').style.color = 'var(--text-dark)';
+                
+                icon.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>';
+                icon.style.background = '#f1f5f9';
+                icon.style.color = '#94a3b8';
+                icon.style.border = '4px solid white';
+                icon.style.width = '60px';
+                icon.style.height = '60px';
+                icon.style.margin = '-50px auto 1rem';
+                if (scoreContainer) scoreContainer.style.display = 'none';
+            } else {
+                header.className = 'modal-header blue';
+                header.style.paddingTop = '1.5rem';
+                header.querySelector('h4').style.color = 'white';
+                header.querySelector('h2').style.color = 'white';
+                
+                icon.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
+                icon.style.background = 'rgba(255,255,255,0.2)';
+                icon.style.color = 'white';
+                icon.style.border = 'none';
+                icon.style.width = '48px';
+                icon.style.height = '48px';
+                icon.style.margin = '0 0 1rem 0';
+                
+                if (estado === 'completado') {
+                    if (scoreContainer) {
+                        scoreContainer.style.display = 'block';
+                        document.getElementById('actPuntajeObtenido').textContent = (puntaje || 0) + ' / ' + xp + ' XP';
+                    }
+                    if (url) {
+                        btn.className = 'btn-primary';
+                        btn.textContent = 'Jugar de nuevo';
+                        btn.onclick = function() { window.location.href = url; };
+                    } else {
+                        btn.className = 'btn-disabled';
+                        btn.textContent = 'Próximamente';
+                        btn.onclick = function() { closeModal('actModal'); };
+                    }
+                } else {
+                    if (scoreContainer) scoreContainer.style.display = 'none';
+                    if (url) {
+                        btn.className = 'btn-primary';
+                        btn.textContent = 'Comenzar actividad';
+                        btn.onclick = function() { window.location.href = url; };
+                    } else {
+                        btn.className = 'btn-disabled';
+                        btn.textContent = 'Próximamente disponible';
+                        btn.onclick = function() { closeModal('actModal'); };
+                    }
+                }
+            }
+            
+            document.getElementById('actModal').classList.add('active');
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            if (modal) {
+                modal.classList.remove('active');
+            }
+        }
+
+        function handleOverlayClick(event, id) {
+            if (event.target.id === id) {
+                closeModal(id);
+            }
+        }
+
+        window.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeModal('actModal');
+                closeModal('errorModal');
+            }
+        });
+
+        // Función auxiliar para demostrar el popup de error
+        function simularError() {
+            document.getElementById('errorModal').classList.add('active');
+        }
+    </script>
+</body>
+</html>
+
