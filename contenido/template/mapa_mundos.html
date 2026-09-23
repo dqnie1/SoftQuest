@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'TemarioStyle.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Sora:wght@700;800&display=swap" rel="stylesheet">
+    <title>SoftQuest · Mapa de Mundos</title>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="user-profile">
+            <div class="avatar">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </div>
+            <div class="user-info">
+                <h3>{{ usuario.nombre }}</h3>
+                <p>IS · Nivel {{ progreso_usuario.mundo_actual.orden }}</p>
+            </div>
+        </div>
+
+        <div class="stats-card score-card">
+            <h4>Score</h4>
+            <div class="score">{{ score|default:"0" }}</div>
+            <p>puntos totales</p>
+        </div>
+
+        <div class="stats-box green">
+            <div>
+                <h4>Mundos Completados</h4>
+                <p>{{ mundos_completados }} / {{ total_mundos }}</p>
+            </div>
+        </div>
+
+        <div class="stats-box blue">
+            <div>
+                <h4>Insignias</h4>
+                <p>0 obtenidas</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="topbar">
+            <div class="logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary-color); fill:var(--primary-color)"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                SoftQuest
+            </div>
+            <div class="progress-section">
+                <span class="progress-label">PROGRESO</span>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" style="width: {% widthratio progreso_usuario.mundo_actual.orden total_mundos 100 %}%;"></div>
+                </div>
+                <div class="progress-badge">{{ progreso_usuario.mundo_actual.orden }}</div>
+            </div>
+        </header>
+
+        <div class="content-wrapper">
+            <div class="mapa-header">
+                <h1>Mapa de Mundos</h1>
+                <p>Explora y completa cada mundo para avanzar en tu aprendizaje de Ingeniería de Software</p>
+            </div>
+
+            <div class="camino-mundos">
+                {% for m in mundos %}
+                    {% if m.estado == 'bloqueado' %}
+                        <div class="nodo-mundo nodo-bloqueado" onclick="showLockedModal('{{ m.nombre|escapejs }}', '{{ m.prereq.nombre|escapejs }}')">
+                            <div class="nodo-icono">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            </div>
+                            <div class="nodo-info">
+                                <div>
+                                    <div class="nodo-status">BLOQUEADO</div>
+                                    <div class="nodo-titulo">{{ m.nombre }}</div>
+                                </div>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            </div>
+                        </div>
+                    {% elif m.estado == 'completado' %}
+                        <a href="{% url 'temario_mundo' m.id %}" class="nodo-mundo nodo-completado">
+                            <div class="nodo-icono">{{ m.orden }}</div>
+                            <div class="nodo-info">
+                                <div>
+                                    <div class="nodo-status">✓ COMPLETADO</div>
+                                    <div class="nodo-titulo">{{ m.nombre }}</div>
+                                </div>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                            </div>
+                        </a>
+                    {% else %}
+                        <a href="{% url 'temario_mundo' m.id %}" class="nodo-mundo nodo-curso">
+                            <div class="nodo-icono">{{ m.orden }}</div>
+                            <div class="nodo-info">
+                                <div>
+                                    <div class="nodo-status">EN CURSO</div>
+                                    <div class="nodo-titulo">{{ m.nombre }}</div>
+                                </div>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            </div>
+                        </a>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Mundo Bloqueado -->
+    <div class="modal-overlay" id="lockedModal">
+        <div class="modal-content">
+            <div class="modal-header white">
+                <button class="modal-close" onclick="closeModal('lockedModal')">×</button>
+                <div class="modal-icon-top">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                </div>
+                <h4 style="text-align: center; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">MUNDO BLOQUEADO</h4>
+                <h2 style="text-align: center; margin-top: 0.5rem;" id="lockedTitle">Mundo</h2>
+            </div>
+            <div class="modal-body" style="text-align: left; padding-top: 0;">
+                
+                <h4 style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 1px;">Prerequisitos para desbloquear</h4>
+                
+                <div style="background: #fffbeb; border: 1px solid #fde68a; padding: 1rem; border-radius: 12px; display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div style="color: #d97706;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    </div>
+                    <p style="font-size: 0.85rem; color: #92400e; line-height: 1.4;">
+                        Completa "<span id="prereqName" style="font-weight: bold;">Mundo Anterior</span>" para desbloquear este mundo.
+                    </p>
+                </div>
+
+                <h4 style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 1rem; letter-spacing: 1px;">Recompensas al completar</h4>
+                
+                <div class="recompensa-item">
+                    <div class="rec-icono xp"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></div>
+                    <div class="rec-info"><p>Hasta</p><span>Variable XP</span></div>
+                </div>
+                <div class="recompensa-item">
+                    <div class="rec-icono insignia"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15l-2 5l9-9H2L12 15z"></path></svg></div>
+                    <div class="rec-info"><p>Insignia</p><span style="color:var(--primary-color);">"Desarrollador"</span></div>
+                </div>
+                <div class="recompensa-item">
+                    <div class="rec-icono unlock"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></div>
+                    <div class="rec-info"><p>Desbloquea</p><span style="color:var(--green-success);">Siguiente Mundo</span></div>
+                </div>
+
+                <button class="btn-disabled" style="margin-top: 1.5rem;" onclick="closeModal('lockedModal')">Entendido</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showLockedModal(title, prereq) {
+            document.getElementById('lockedTitle').textContent = title;
+            document.getElementById('prereqName').textContent = prereq || 'el nivel anterior';
+            document.getElementById('lockedModal').classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+    </script>
+</body>
+</html>

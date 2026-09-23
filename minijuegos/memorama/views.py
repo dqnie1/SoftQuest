@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_POST
 
-from contenido.models import Actividad, ProgresoActividad
+from contenido.models import Actividad, ProgresoActividad, Usuario
 from .models import Par
 from .operaciones.OperacionesMemorama import OperacionesMemorama
 
@@ -42,15 +42,29 @@ def guardar_progreso(request):
     except (TypeError, ValueError, KeyError, json.JSONDecodeError):
         return JsonResponse({'guardado': False, 'error': 'Datos invalidos'}, status=400)
 
+    usuario = None
     if request.user.is_authenticated:
-        try:
-            actividad = Actividad.objects.get(pk=id_actividad)
-            ProgresoActividad.objects.update_or_create(
-                usuario_id=request.user.id,
-                actividad=actividad,
-                defaults={'estado': 'completado', 'intentos': intentos},
-            )
-        except Actividad.DoesNotExist:
-            return JsonResponse({'guardado': False, 'error': 'Actividad no encontrada'}, status=404)
+        usuario = Usuario.objects.filter(email=request.user.email).first()
+        if usuario is None:
+            usuario = Usuario.objects.filter(pk=request.user.id).first()
+
+    if usuario is None:
+        return JsonResponse(
+            {'guardado': False, 'error': 'Usuario no identificado'},
+            status=401,
+        )
+
+    try:
+        actividad = Actividad.objects.get(pk=id_actividad)
+        ProgresoActividad.objects.update_or_create(
+            usuario=usuario,
+            actividad=actividad,
+            defaults={
+                'estado': 'completado',
+                'intentos': intentos,
+            },
+        )
+    except Actividad.DoesNotExist:
+        return JsonResponse({'guardado': False, 'error': 'Actividad no encontrada'}, status=404)
 
     return JsonResponse({'guardado': True})
