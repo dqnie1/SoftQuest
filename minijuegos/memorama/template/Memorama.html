@@ -220,6 +220,9 @@
                 })
                 .then(response => response.json())
                 .then(data => {
+                    if (!data.guardado) {
+                        throw new Error(data.error || 'No se pudo guardar el progreso');
+                    }
                     // Pasos 24-25: Renderiza vista de actividad completada y muestra modal
                     setTimeout(() => {
                         finResumen.textContent = `Lo lograste en ${intentos} intentos.`;
@@ -229,7 +232,7 @@
                 .catch(err => {
                     console.error('Error al guardar progreso:', err);
                     setTimeout(() => {
-                        finResumen.textContent = `Lo lograste en ${intentos} intentos.`;
+                        finResumen.textContent = 'Completaste el juego, pero no se pudo guardar tu progreso.';
                         modalFin.showModal();
                     }, 500);
                 });
