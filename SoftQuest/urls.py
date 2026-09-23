@@ -8,4 +8,5 @@ urlpatterns = [
     path('', include('contenido.urls')),
     path('', include('minijuegos.memorama.urls')),
     path('', include('minijuegos.trivia.urls')),
+    path('', include('minijuegos.match.urls')), #url de minijuego
 ]
