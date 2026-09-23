@@ -80,6 +80,7 @@ TEMPLATES = [
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         # Ruta de la carpeta de los templates
         'DIRS': [
+            BASE_DIR / 'contenido' / 'template',
             BASE_DIR / 'minijuegos' / 'memorama' / 'template',
             BASE_DIR / 'minijuegos' / 'trivia' / 'template',
             BASE_DIR / 'minijuegos' / 'match' / 'template',
@@ -159,6 +160,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     #squi van las urls de los archivos de estilos
+    BASE_DIR / 'contenido' / 'template' / 'style',
     BASE_DIR / 'minijuegos' / 'memorama' / 'template' / 'style',
     BASE_DIR / 'minijuegos' / 'trivia' / 'template' / 'style',
 ]

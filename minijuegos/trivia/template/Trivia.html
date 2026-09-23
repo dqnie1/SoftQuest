@@ -54,7 +54,11 @@
         </div>
         <div class="acciones-resultado">
             <button type="button" class="boton boton--azul" disabled title="Lo implementa otra persona">Siguiente Actividad</button>
+            {% if request.session.mundo_id %}
+            <a class="enlace-suave" href="{% url 'temario_mundo' request.session.mundo_id %}">Volver al Temario</a>
+            {% else %}
             <span class="enlace-suave">Volver al Temario</span>
+            {% endif %}
         </div>
     </section>
 
@@ -71,7 +75,11 @@
         </p>
         <div class="acciones-resultado">
             <button type="button" class="boton boton--azul" id="btn-reintentar">Reintentar Trivia</button>
+            {% if request.session.mundo_id %}
+            <a class="enlace-suave" href="{% url 'temario_mundo' request.session.mundo_id %}">Regresar al Temario</a>
+            {% else %}
             <span class="enlace-suave">Regresar al Temario</span>
+            {% endif %}
         </div>
     </section>
 
@@ -310,7 +318,11 @@
         </p>
         <div class="acciones-error">
             <button type="button" class="boton boton--azul boton--compacto" onclick="location.reload()">Reintentar</button>
+            {% if request.session.mundo_id %}
+            <a class="boton boton--gris boton--compacto" href="{% url 'temario_mundo' request.session.mundo_id %}">Volver al Temario</a>
+            {% else %}
             <button type="button" class="boton boton--gris boton--compacto" disabled title="Lo implementa otra persona">Volver al Temario</button>
+            {% endif %}
         </div>
     </section>
     {% endif %}

@@ -42,7 +42,14 @@
         <dialog class="fin" id="modal-fin">
             <h2 class="fin__titulo">¡Felicidades! 🎉</h2>
             <p class="fin__resumen" id="fin-resumen">Completaste el memorama.</p>
-            <button class="boton" onclick="location.reload()">Jugar de nuevo</button>
+            <div style="display: flex; gap: 0.75rem; justify-content: center; align-items: center; flex-wrap: wrap;">
+                <button class="boton" onclick="location.reload()">Jugar de nuevo</button>
+                {% if request.session.mundo_id %}
+                <a class="boton" style="background: #eef2ff; color: var(--acento); border: 1px solid var(--borde);" href="{% url 'temario_mundo' request.session.mundo_id %}">Volver al Temario</a>
+                {% else %}
+                <a class="boton" style="background: #eef2ff; color: var(--acento); border: 1px solid var(--borde);" href="{% url 'mapa_mundos' %}">Volver al Mapa</a>
+                {% endif %}
+            </div>
         </dialog>
 
         <script>
