@@ -5,6 +5,7 @@ from django.shortcuts import render
 from django.views.decorators.http import require_POST
 
 from contenido.models import Actividad, ProgresoActividad
+from contenido.operaciones.OperacionesContenido import OperacionesContenido
 from .models import Concepto
 from .operaciones.OperacionesMatch import OperacionesMatch
 
@@ -72,6 +73,7 @@ def guardar_progreso(request):
 
         id_actividad = int(datos['id_actividad'])
         intentos = int(datos.get('intentos', 0))
+        puntaje = max(0, min(100, int(datos.get('puntaje', 0))))
 
     except (TypeError, ValueError, KeyError, json.JSONDecodeError):
         return JsonResponse({
@@ -79,24 +81,30 @@ def guardar_progreso(request):
             'error': 'Datos invalidos'
         }, status=400)
 
-    if request.user.is_authenticated:
-        try:
-            actividad = Actividad.objects.get(pk=id_actividad)
+    usuario = OperacionesContenido().obtener_usuario(request)
 
-            ProgresoActividad.objects.update_or_create(
-                usuario_id=request.user.id,
-                actividad=actividad,
-                defaults={
-                    'estado': 'completado',
-                    'intentos': intentos
-                },
-            )
+    if usuario is None:
+        return JsonResponse({
+            'guardado': False,
+            'error': 'Usuario no identificado'
+        }, status=401)
 
-        except Actividad.DoesNotExist:
-            return JsonResponse({
-                'guardado': False,
-                'error': 'Actividad no encontrada'
-            }, status=404)
+    try:
+        actividad = Actividad.objects.get(pk=id_actividad)
+        ProgresoActividad.objects.update_or_create(
+            usuario=usuario,
+            actividad=actividad,
+            defaults={
+                'estado': 'completado',
+                'intentos': intentos,
+                'puntaje': puntaje
+            },
+        )
+    except Actividad.DoesNotExist:
+        return JsonResponse({
+            'guardado': False,
+            'error': 'Actividad no encontrada'
+        }, status=404)
 
     return JsonResponse({
         'guardado': True

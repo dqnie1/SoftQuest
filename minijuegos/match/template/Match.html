@@ -65,12 +65,20 @@
         <dialog class="fin" id="modal-fin">
             <h2 class="fin__titulo">¡Todo correcto! 🎉</h2>
             <p class="fin__resumen" id="fin-resumen">Emparejaste todos los conceptos.</p>
-            <button class="boton" onclick="location.reload()">Jugar de nuevo</button>
+            <div style="display: flex; gap: 0.75rem; justify-content: center; align-items: center; flex-wrap: wrap;">
+                <button class="boton" onclick="location.reload()">Jugar de nuevo</button>
+                {% if request.session.mundo_id %}
+                <a class="boton" style="background: #eef2ff; color: var(--acento); border: 1px solid var(--borde);" href="{% url 'temario_mundo' request.session.mundo_id %}">Volver al Temario</a>
+                {% else %}
+                <a class="boton" style="background: #eef2ff; color: var(--acento); border: 1px solid var(--borde);" href="{% url 'mapa_mundos' %}">Volver al Mapa</a>
+                {% endif %}
+            </div>
         </dialog>
 
         <script>
             const csrfToken = '{{ csrf_token }}';
             const idMatch = {{ id_match|default:"null" }};
+            let porcentajeObtenido = 0;
 
             const rawTerminos = [
                 {% for concepto in conceptos %}
@@ -229,7 +237,7 @@
                     definicion_id: Number(definicionId),
                 }));
 
-                fetch('{% url "validar_match" %}', {
+                fetch('{% url "match:validar_match" %}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -262,6 +270,7 @@
 
                 dibujarLineas();
                 statAciertos.textContent = data.aciertos;
+                porcentajeObtenido = data.porcentaje;
                 resultadosMarcador.textContent = `${data.porcentaje}%`;
                 resultadosTitulo.textContent = data.completado ? '¡Todo correcto!' : 'Casi lo tienes';
                 btnContinuar.hidden = !data.completado;
@@ -285,7 +294,7 @@
 
 btnContinuar.addEventListener('click', () => {
     modalResultados.close();
-    fetch('{% url "guardar_progreso" %}', {
+    fetch('{% url "match:guardar_progreso" %}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -294,16 +303,17 @@ btnContinuar.addEventListener('click', () => {
         body: JSON.stringify({
             id_actividad: idMatch,
             intentos: totalConceptos,
+                    puntaje: porcentajeObtenido,
         }),
     })
         .then((response) => response.json())
         .then(() => {
-            finResumen.textContent = `Emparejaste ${totalConceptos} de ${totalConceptos} conceptos.`;
+            finResumen.textContent = `Obtuviste ${porcentajeObtenido}% (${totalConceptos} de ${totalConceptos} conceptos).`;
             modalFin.showModal();
         })
         .catch((error) => {
             console.error('Error al guardar progreso:', error);
-            finResumen.textContent = `Emparejaste ${totalConceptos} de ${totalConceptos} conceptos.`;
+            finResumen.textContent = `Obtuviste ${porcentajeObtenido}% (${totalConceptos} de ${totalConceptos} conceptos).`;
             modalFin.showModal();
         });
 });

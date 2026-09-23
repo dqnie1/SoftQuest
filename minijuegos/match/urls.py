@@ -1,6 +1,8 @@
 from django.urls import path
 from . import views
 
+app_name = 'match'
+
 # aquí van las URLs de toda la app de actividades
 urlpatterns = [
     # Abre el Match general con todos los conceptos disponibles.

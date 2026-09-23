@@ -57,7 +57,7 @@
             {% if request.session.mundo_id %}
             <a class="enlace-suave" href="{% url 'temario_mundo' request.session.mundo_id %}">Volver al Temario</a>
             {% else %}
-            <span class="enlace-suave">Volver al Temario</span>
+            <a class="enlace-suave" href="{% url 'mapa_mundos' %}">Volver al Mapa</a>
             {% endif %}
         </div>
     </section>
@@ -78,7 +78,7 @@
             {% if request.session.mundo_id %}
             <a class="enlace-suave" href="{% url 'temario_mundo' request.session.mundo_id %}">Regresar al Temario</a>
             {% else %}
-            <span class="enlace-suave">Regresar al Temario</span>
+            <a class="enlace-suave" href="{% url 'mapa_mundos' %}">Regresar al Mapa</a>
             {% endif %}
         </div>
     </section>
@@ -247,7 +247,7 @@
 
         function guardarProgreso(data) {
             if (!idActividad) return Promise.resolve();
-            return fetch('{% url "guardar_progreso_trivia" %}', {
+            return fetch('{% url "trivia:guardar_progreso_trivia" %}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -280,7 +280,7 @@
             btnAccion.disabled = true;
 
             const pregunta = preguntasData[indice];
-            fetch('{% url "validar_respuesta" %}', {
+            fetch('{% url "trivia:validar_respuesta" %}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -321,7 +321,7 @@
             {% if request.session.mundo_id %}
             <a class="boton boton--gris boton--compacto" href="{% url 'temario_mundo' request.session.mundo_id %}">Volver al Temario</a>
             {% else %}
-            <button type="button" class="boton boton--gris boton--compacto" disabled title="Lo implementa otra persona">Volver al Temario</button>
+            <a class="boton boton--gris boton--compacto" href="{% url 'mapa_mundos' %}">Volver al Mapa</a>
             {% endif %}
         </div>
     </section>

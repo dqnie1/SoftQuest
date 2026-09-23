@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 
+app_name = 'trivia'
 # URLs del minijuego Trivia
 urlpatterns = [
 	# Abre la trivia general (sin preguntas si no hay id).

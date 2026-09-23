@@ -86,12 +86,15 @@ def temario_mundo(request, mundo_id):
             act.tipo_display = 'Memorama'
         elif tipo_normalizado == 'trivia':
             try:
-                act.url = reverse('trivia_detalle', kwargs={'id_trivia': act.id})
+                act.url = reverse('trivia:trivia_detalle', kwargs={'id_trivia': act.id})
             except Exception:
                 act.url = f'/trivia/{act.id}/'
             act.tipo_display = 'Trivia'
         elif tipo_normalizado in ('match_juego', 'match'):
-            act.url = ''
+            try:
+                act.url = reverse('match:match_detalle', kwargs={'id_match': act.id})
+            except Exception:
+                act.url = f'/match/{act.id}/'
             act.tipo_display = 'Match'
         else:
             act.url = ''
