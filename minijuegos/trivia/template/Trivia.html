@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'TriviaStyle.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@700;800&display=swap" rel="stylesheet">
+    <title>SoftQuest · Trivia</title>
+</head>
+<body>
+    {% if hay_preguntas %}
+    {{ preguntas|json_script:"preguntas-data" }}
+
+    <div class="trivia-app" id="pantalla-juego">
+        <header class="trivia-header">
+            <p class="trivia-header__titulo">{{ titulo_actividad }}</p>
+        </header>
+        <div class="progreso-barra" aria-hidden="true">
+            <div class="progreso-barra__lleno" id="barra-progreso"></div>
+        </div>
+
+        <main class="trivia-cuerpo">
+            <div class="badge-wrap">
+                <span class="badge-pregunta" id="badge-pregunta">PREGUNTA 1 DE {{ total_preguntas }}</span>
+            </div>
+            <h1 class="pregunta-texto" id="texto-pregunta"></h1>
+            <ul class="opciones" id="lista-opciones"></ul>
+        </main>
+
+        <footer class="trivia-footer" id="trivia-footer">
+            <div class="footer-inner">
+                <div class="footer-feedback" id="footer-feedback" hidden></div>
+                <button type="button" class="boton boton--azul" id="btn-accion" disabled>Comprobar</button>
+            </div>
+        </footer>
+    </div>
+
+    <section class="pantalla resultado" id="pantalla-exito" hidden>
+        <div class="resultado__icono resultado__icono--ok" aria-hidden="true">🏆</div>
+        <h1 class="resultado__titulo">¡Nivel Completado!</h1>
+        <div class="caja-aciertos caja-aciertos--ok">
+            <span class="caja-aciertos__valor" id="exito-porcentaje">0%</span>
+            <span class="caja-aciertos__label">Aciertos</span>
+        </div>
+        <div class="xp-banner">
+            <div>
+                <p class="xp-banner__titulo">Resumen</p>
+                <p class="xp-banner__sub">Calificación de la trivia</p>
+            </div>
+            <span class="xp-banner__valor" id="exito-detalle">0 / 0</span>
+        </div>
+        <div class="acciones-resultado">
+            <button type="button" class="boton boton--azul" disabled title="Lo implementa otra persona">Siguiente Actividad</button>
+            {% if request.session.mundo_id %}
+            <a class="enlace-suave" href="{% url 'temario_mundo' request.session.mundo_id %}">Volver al Temario</a>
+            {% else %}
+            <a class="enlace-suave" href="{% url 'mapa_mundos' %}">Volver al Mapa</a>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="pantalla resultado" id="pantalla-reintento" hidden>
+        <div class="resultado__icono resultado__icono--mal" aria-hidden="true">📖</div>
+        <h1 class="resultado__titulo">¡Sigue Practicando!</h1>
+        <div class="caja-aciertos caja-aciertos--mal">
+            <span class="caja-aciertos__valor" id="reintento-porcentaje">0%</span>
+            <span class="caja-aciertos__label">Aciertos</span>
+        </div>
+        <p class="mensaje-reintento">
+            Necesitas al menos {{ umbral }}% para desbloquear la siguiente actividad.
+            ¡Repasa los conceptos e inténtalo de nuevo!
+        </p>
+        <div class="acciones-resultado">
+            <button type="button" class="boton boton--azul" id="btn-reintentar">Reintentar Trivia</button>
+            {% if request.session.mundo_id %}
+            <a class="enlace-suave" href="{% url 'temario_mundo' request.session.mundo_id %}">Regresar al Temario</a>
+            {% else %}
+            <a class="enlace-suave" href="{% url 'mapa_mundos' %}">Regresar al Mapa</a>
+            {% endif %}
+        </div>
+    </section>
+
+    <script>
+        const csrfToken = '{{ csrf_token }}';
+        const idActividad = {{ id_trivia|default:"null" }};
+        const umbral = {{ umbral|default:70 }};
+        const preguntasData = JSON.parse(document.getElementById('preguntas-data').textContent);
+        const letras = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
+        const pantallaJuego = document.getElementById('pantalla-juego');
+        const pantallaExito = document.getElementById('pantalla-exito');
+        const pantallaReintento = document.getElementById('pantalla-reintento');
+        const badgePregunta = document.getElementById('badge-pregunta');
+        const textoPregunta = document.getElementById('texto-pregunta');
+        const listaOpciones = document.getElementById('lista-opciones');
+        const barraProgreso = document.getElementById('barra-progreso');
+        const triviaFooter = document.getElementById('trivia-footer');
+        const footerFeedback = document.getElementById('footer-feedback');
+        const btnAccion = document.getElementById('btn-accion');
+        const btnReintentar = document.getElementById('btn-reintentar');
+
+        let indice = 0;
+        let seleccionId = null;
+        let bloqueado = false;
+        let fase = 'seleccion'; // seleccion | feedback
+        let intentos = 0;
+        let aciertos = 0;
+
+        function mostrarPantallaFinal(aprobado) {
+            pantallaJuego.hidden = true;
+            if (aprobado) {
+                pantallaExito.hidden = false;
+                pantallaReintento.hidden = true;
+            } else {
+                pantallaExito.hidden = true;
+                pantallaReintento.hidden = false;
+            }
+        }
+
+        function actualizarBarra() {
+            const pct = ((indice + 1) / preguntasData.length) * 100;
+            barraProgreso.style.width = `${pct}%`;
+        }
+
+        function resetFooterSeleccion() {
+            fase = 'seleccion';
+            triviaFooter.className = 'trivia-footer';
+            footerFeedback.hidden = true;
+            footerFeedback.innerHTML = '';
+            btnAccion.hidden = false;
+            btnAccion.disabled = seleccionId == null;
+            btnAccion.className = 'boton boton--azul';
+            btnAccion.textContent = 'Comprobar';
+        }
+
+        function renderPregunta() {
+            const pregunta = preguntasData[indice];
+            seleccionId = null;
+            bloqueado = false;
+            badgePregunta.textContent = `PREGUNTA ${indice + 1} DE ${preguntasData.length}`;
+            textoPregunta.textContent = pregunta.texto;
+            actualizarBarra();
+            listaOpciones.innerHTML = '';
+
+            pregunta.respuestas.forEach((respuesta, i) => {
+                const li = document.createElement('li');
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'opcion';
+                btn.dataset.id = respuesta.id;
+                btn.innerHTML = `
+                    <span class="opcion__letra">${letras[i] || (i + 1)}</span>
+                    <span class="opcion__texto"></span>`;
+                btn.querySelector('.opcion__texto').textContent = respuesta.texto;
+                btn.addEventListener('click', () => {
+                    if (bloqueado) return;
+                    seleccionId = Number(respuesta.id);
+                    listaOpciones.querySelectorAll('.opcion').forEach((el) => {
+                        el.classList.toggle('is-seleccionada', Number(el.dataset.id) === seleccionId);
+                    });
+                    btnAccion.disabled = false;
+                    btnAccion.className = 'boton boton--azul';
+                });
+                li.appendChild(btn);
+                listaOpciones.appendChild(li);
+            });
+
+            resetFooterSeleccion();
+        }
+
+        function mostrarFeedback(data) {
+            bloqueado = true;
+            fase = 'feedback';
+            const esUltima = indice + 1 >= preguntasData.length;
+
+            listaOpciones.querySelectorAll('.opcion').forEach((el) => {
+                el.disabled = true;
+                const id = Number(el.dataset.id);
+                el.classList.remove('is-seleccionada');
+
+                if (data.correcto) {
+                    if (id === seleccionId) {
+                        el.classList.add('is-acierto');
+                        el.querySelector('.opcion__letra').textContent = '✓';
+                    } else {
+                        el.classList.add('is-atenuada');
+                    }
+                } else {
+                    if (id === seleccionId) {
+                        el.classList.add('is-error');
+                        el.querySelector('.opcion__letra').textContent = '✕';
+                    } else if (id === data.respuesta_correcta_id) {
+                        el.classList.add('is-acierto');
+                        el.querySelector('.opcion__letra').textContent = '✓';
+                    } else {
+                        el.classList.add('is-atenuada');
+                    }
+                }
+            });
+
+            footerFeedback.hidden = false;
+            if (data.correcto) {
+                triviaFooter.className = 'trivia-footer trivia-footer--ok';
+                footerFeedback.className = 'footer-feedback footer-feedback--ok';
+                footerFeedback.innerHTML = `
+                    <span class="footer-feedback__icono">✓</span>
+                    <div>
+                        <p class="footer-feedback__titulo">¡Correcto!</p>
+                    </div>`;
+                btnAccion.className = 'boton boton--verde';
+                btnAccion.textContent = esUltima ? 'Ver resultado >' : 'Continuar >';
+            } else {
+                triviaFooter.className = 'trivia-footer trivia-footer--mal';
+                footerFeedback.className = 'footer-feedback footer-feedback--mal';
+                footerFeedback.innerHTML = `
+                    <span class="footer-feedback__icono">✕</span>
+                    <div>
+                        <p class="footer-feedback__titulo">Respuesta incorrecta</p>
+                        <p class="footer-feedback__texto">Respuesta correcta: ${data.respuesta_correcta_texto}</p>
+                    </div>`;
+                btnAccion.className = 'boton boton--rojo';
+                btnAccion.textContent = esUltima ? 'Ver resultado >' : 'Entendido >';
+            }
+            btnAccion.disabled = false;
+        }
+
+        function finalizarTrivia() {
+            const total = preguntasData.length;
+            const porcentaje = total ? Math.round((aciertos / total) * 100) : 0;
+            const aprobado = porcentaje >= umbral;
+            const resultado = { aciertos, total, porcentaje, aprobado };
+
+            guardarProgreso(resultado).finally(() => {
+                if (aprobado) {
+                    document.getElementById('exito-porcentaje').textContent = `${porcentaje}%`;
+                    document.getElementById('exito-detalle').textContent = `${aciertos} / ${total}`;
+                    mostrarPantallaFinal(true);
+                } else {
+                    document.getElementById('reintento-porcentaje').textContent = `${porcentaje}%`;
+                    mostrarPantallaFinal(false);
+                }
+            });
+        }
+
+        function guardarProgreso(data) {
+            if (!idActividad) return Promise.resolve();
+            return fetch('{% url "trivia:guardar_progreso_trivia" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: JSON.stringify({
+                    id_actividad: idActividad,
+                    intentos: intentos,
+                    puntaje: data.porcentaje,
+                    aprobado: data.aprobado,
+                }),
+            }).catch((err) => console.error('Error al guardar progreso:', err));
+        }
+
+        btnAccion.addEventListener('click', () => {
+            if (btnAccion.disabled) return;
+
+            if (fase === 'feedback') {
+                if (indice + 1 < preguntasData.length) {
+                    indice += 1;
+                    renderPregunta();
+                } else {
+                    finalizarTrivia();
+                }
+                return;
+            }
+
+            if (seleccionId == null) return;
+            intentos += 1;
+            btnAccion.disabled = true;
+
+            const pregunta = preguntasData[indice];
+            fetch('{% url "trivia:validar_respuesta" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: JSON.stringify({
+                    pregunta_id: pregunta.id,
+                    respuesta_id: seleccionId,
+                }),
+            })
+            .then((r) => r.json())
+            .then((data) => {
+                if (!data.ok) throw new Error(data.error || 'Error');
+                if (data.correcto) aciertos += 1;
+                mostrarFeedback(data);
+            })
+            .catch((err) => {
+                console.error(err);
+                btnAccion.disabled = false;
+                alert('No se pudo validar la respuesta. Inténtalo de nuevo.');
+            });
+        });
+
+        btnReintentar.addEventListener('click', () => location.reload());
+        renderPregunta();
+    </script>
+
+    {% else %}
+    <section class="resultado">
+        <div class="resultado__icono resultado__icono--error" aria-hidden="true">!</div>
+        <h1 class="resultado__titulo">Error al cargar la trivia</h1>
+        <p class="mensaje-error">
+            No pudimos obtener las preguntas desde el servidor.
+            Por favor verifica tu conexión a internet o intenta más tarde.
+        </p>
+        <div class="acciones-error">
+            <button type="button" class="boton boton--azul boton--compacto" onclick="location.reload()">Reintentar</button>
+            {% if request.session.mundo_id %}
+            <a class="boton boton--gris boton--compacto" href="{% url 'temario_mundo' request.session.mundo_id %}">Volver al Temario</a>
+            {% else %}
+            <a class="boton boton--gris boton--compacto" href="{% url 'mapa_mundos' %}">Volver al Mapa</a>
+            {% endif %}
+        </div>
+    </section>
+    {% endif %}
+</body>
+</html>

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'MemoramaStyle.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Sora:wght@700;800&display=swap" rel="stylesheet">
+    <title>{{ mundo|default:"SoftQuest" }} · Memorama</title>
+</head>
+<body>
+    <main class="contenedor">
+        <header class="barra">
+            <div>
+                <p class="barra__mundo">{{ mundo|default:"Mundo 1" }}</p>
+                <p class="barra__materia">SoftQuest · Memorama</p>
+            </div>
+            <dl class="barra__stats">
+                <div class="stat">
+                    <dt>Movimientos</dt>
+                    <dd id="stat-intentos">0</dd>
+                </div>
+                <div class="stat">
+                    <dt>Aciertos</dt>
+                    <dd id="stat-aciertos">0</dd>
+                </div>
+            </dl>
+        </header>
+
+        <section class="intro">
+            <h1 class="intro__titulo">Juego de Memorama</h1>
+            <p class="intro__texto">Encuentra todos los pares relacionando las tarjetas correspondientes.</p>
+        </section>
+
+        {% if hay_pares %}
+        <div class="tablero" id="tablero" style="--columnas: 4;">
+            <!-- Cartas generadas dinámicamente -->
+        </div>
+
+        <dialog class="fin" id="modal-fin">
+            <h2 class="fin__titulo">¡Felicidades! 🎉</h2>
+            <p class="fin__resumen" id="fin-resumen">Completaste el memorama.</p>
+            <div style="display: flex; gap: 0.75rem; justify-content: center; align-items: center; flex-wrap: wrap;">
+                <button class="boton" onclick="location.reload()">Jugar de nuevo</button>
+                {% if request.session.mundo_id %}
+                <a class="boton" style="background: #eef2ff; color: var(--acento); border: 1px solid var(--borde);" href="{% url 'temario_mundo' request.session.mundo_id %}">Volver al Temario</a>
+                {% else %}
+                <a class="boton" style="background: #eef2ff; color: var(--acento); border: 1px solid var(--borde);" href="{% url 'mapa_mundos' %}">Volver al Mapa</a>
+                {% endif %}
+            </div>
+        </dialog>
+
+        <script>
+            const csrfToken = '{{ csrf_token }}';
+            const rawCartas = [
+                {% for par in pares %}
+                { parId: {{ par.id }}, contenido: "{{ par.elemento_a|escapejs }}" },
+                { parId: {{ par.id }}, contenido: "{{ par.elemento_b|escapejs }}" },
+                {% endfor %}
+            ];
+
+            const totalPares = {{ pares|length|default:0 }};
+            const idActividad = {{ id_memorama|default:"null" }};
+
+            for (let indice = rawCartas.length - 1; indice > 0; indice--) {
+                const posicionAleatoria = Math.floor(Math.random() * (indice + 1));
+                [rawCartas[indice], rawCartas[posicionAleatoria]] = [
+                    rawCartas[posicionAleatoria],
+                    rawCartas[indice]
+                ];
+            }
+
+            // Flujo Excepción 1.0: Muestra mensaje de que no se pudo recuperar las cartas
+            if (!rawCartas.length) {
+                const tablero = document.getElementById('tablero');
+                if (tablero) {
+                    tablero.innerHTML = '<div class="error-carga" style="color:#d6455d; text-align:center; padding:2rem;">No se pudieron recuperar las cartas.</div>';
+                }
+            }
+
+            const tablero = document.getElementById('tablero');
+            const statIntentos = document.getElementById('stat-intentos');
+            const statAciertos = document.getElementById('stat-aciertos');
+            const modalFin = document.getElementById('modal-fin');
+            const finResumen = document.getElementById('fin-resumen');
+
+            // Cartas escogidas por el usuario
+            let primeraCarta = null;
+            let segundaCarta = null;
+
+            let bloqueado = false;
+            let intentos = 0;
+            let aciertos = 0;
+
+            // Renderizar cartas obtenidas (Muestra pares en forma de cartas al revés)
+            rawCartas.forEach((cartaData, index) => {
+                const button = document.createElement('button');
+                button.className = 'carta';
+                button.dataset.parId = cartaData.parId;
+                button.dataset.index = index;
+
+                const inner = document.createElement('div');
+                inner.className = 'carta__inner';
+
+                const frente = document.createElement('div');
+                frente.className = 'carta__cara carta__cara--frente';
+                frente.textContent = '?';
+
+                const dorso = document.createElement('div');
+                dorso.className = 'carta__cara carta__cara--dorso';
+                
+                if (cartaData.contenido.match(/\.(jpeg|jpg|gif|png|svg|webp)$/i) || cartaData.contenido.startsWith('http')) {
+                    const img = document.createElement('img');
+                    img.src = cartaData.contenido;
+                    img.alt = 'Carta';
+                    img.className = 'carta__img';
+                    dorso.appendChild(img);
+                } else {
+                    const txt = document.createElement('span');
+                    txt.className = 'carta__texto';
+                    txt.textContent = cartaData.contenido;
+                    dorso.appendChild(txt);
+                }
+
+                inner.appendChild(frente);
+                inner.appendChild(dorso);
+                button.appendChild(inner);
+
+                button.addEventListener('click', () => voltearCarta(button));
+                tablero.appendChild(button);
+            });
+
+            // Pasos 11-14: Selecciona cartas y muestra lado oculto
+            function voltearCarta(carta) {
+                if (bloqueado || carta.classList.contains('is-volteada') || carta.classList.contains('is-acertada')) return;
+
+                carta.classList.add('is-volteada');
+
+                if (!primeraCarta) {
+                    primeraCarta = carta;
+                } else {
+                    segundaCarta = carta;
+                    intentos++;
+                    statIntentos.textContent = intentos;
+                    validarPar();
+                }
+            }
+
+            // Paso 15: Par escogido -> Petición HTTP a ViewMemorama
+            function validarPar() {
+                bloqueado = true;
+                const parAId = primeraCarta.dataset.parId;
+                const parBId = segundaCarta.dataset.parId;
+
+                fetch('{% url "memorama:validar_par" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({
+                        primera_carta_id: parAId,
+                        segunda_carta_id: parBId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Paso 18: Renderiza si fue correcto o no el par
+                    if (data.correcto) {
+                        // Paso 19: Muestra que fue correcto el par y pone verde el marco
+                        primeraCarta.classList.add('is-acertada');
+                        segundaCarta.classList.add('is-acertada');
+                        aciertos++;
+                        statAciertos.textContent = aciertos;
+                        resetSeleccion();
+
+                        if (aciertos === totalPares) {
+                            finalizarActividad();
+                        }
+                    } else {
+                        // Paso 18a / 19a: Muestra que fue no correcto, marco rojo y vuelve a voltear las cartas
+                        primeraCarta.classList.add('is-error');
+                        segundaCarta.classList.add('is-error');
+
+                        setTimeout(() => {
+                            primeraCarta.classList.remove('is-volteada', 'is-error');
+                            segundaCarta.classList.remove('is-volteada', 'is-error');
+                            resetSeleccion();
+                        }, 1000);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error al validar par:', error);
+                    // Fallback visual si hay un fallo de red
+                    if (parAId === parBId) {
+                        primeraCarta.classList.add('is-acertada');
+                        segundaCarta.classList.add('is-acertada');
+                        aciertos++;
+                        statAciertos.textContent = aciertos;
+                        if (aciertos === totalPares) finalizarActividad();
+                    } else {
+                        primeraCarta.classList.add('is-error');
+                        segundaCarta.classList.add('is-error');
+                        setTimeout(() => {
+                            primeraCarta.classList.remove('is-volteada', 'is-error');
+                            segundaCarta.classList.remove('is-volteada', 'is-error');
+                        }, 1000);
+                    }
+                    resetSeleccion();
+                });
+            }
+
+            // Paso 20: guardarProgresoActividad(id_actividad, usuario)
+            function finalizarActividad() {
+                fetch('{% url "memorama:guardar_progreso" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({
+                        id_actividad: idActividad,
+                        intentos: intentos
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.guardado) {
+                        throw new Error(data.error || 'No se pudo guardar el progreso');
+                    }
+                    // Pasos 24-25: Renderiza vista de actividad completada y muestra modal
+                    setTimeout(() => {
+                        finResumen.textContent = `Lo lograste en ${intentos} intentos.`;
+                        modalFin.showModal();
+                    }, 500);
+                })
+                .catch(err => {
+                    console.error('Error al guardar progreso:', err);
+                    setTimeout(() => {
+                        finResumen.textContent = 'Completaste el juego, pero no se pudo guardar tu progreso.';
+                        modalFin.showModal();
+                    }, 500);
+                });
+            }
+
+            function resetSeleccion() {
+                primeraCarta = null;
+                segundaCarta = null;
+                bloqueado = false;
+            }
+        </script>
+        {% else %}
+        <!-- Flujo Excepción 1.0 (Paso 10a): Muestra mensaje de que no se pudo recuperar las cartas -->
+        <section class="estado-vacio" style="max-width: 520px; margin: 2rem auto; padding: 2rem; border-radius: 18px; background: rgba(255,255,255,0.08); text-align: center; border: 1px solid rgba(255,255,255,0.15);">
+            <h2 style="margin: 0 0 0.75rem; color: #f8d7da;">No se pudieron recuperar las cartas</h2>
+            <p style="margin: 0; color: var(--tinta-suave);">No fue posible recuperar los elementos del memorama desde el servidor.</p>
+        </section>
+        {% endif %}
+    </main>
+</body>
+</html>
