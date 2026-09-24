@@ -60,9 +60,10 @@ def guardar_progreso(request):
             defaults={
                 'estado': 'completado',
                 'intentos': intentos,
-                'puntaje': 100
+                'puntaje': actividad.puntos_max or 100
             },
         )
+        OperacionesContenido().actualizar_progreso_mundo(usuario)
     except Actividad.DoesNotExist:
         return JsonResponse({'guardado': False, 'error': 'Actividad no encontrada'}, status=404)
 

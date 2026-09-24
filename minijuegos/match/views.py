@@ -100,6 +100,7 @@ def guardar_progreso(request):
                 'puntaje': puntaje
             },
         )
+        OperacionesContenido().actualizar_progreso_mundo(usuario)
     except Actividad.DoesNotExist:
         return JsonResponse({
             'guardado': False,

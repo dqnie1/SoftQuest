@@ -2,35 +2,53 @@ from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.http import Http404
 from .models import Mundo, Temario, Actividad, ProgresoUsuario, ProgresoActividad, Usuario
+from .operaciones.OperacionesContenido import OperacionesContenido
 
 def get_current_user():
     # Helper for the mock user until auth is implemented
     user = Usuario.objects.first()
+    if not user:
+        user = Usuario.objects.create(nombre="Estudiante", email="estudiante@softquest.com")
     return user
 
 def mapa_mundos(request):
     usuario = get_current_user()
-    progreso_usuario, _ = ProgresoUsuario.objects.get_or_create(
-        usuario=usuario, 
-        defaults={'mundo_actual_id': 1} # Default to world 1
-    )
+    ops = OperacionesContenido()
+    progreso_usuario = ops.actualizar_progreso_mundo(usuario)
+    if not progreso_usuario:
+        progreso_usuario, _ = ProgresoUsuario.objects.get_or_create(
+            usuario=usuario, 
+            defaults={'mundo_actual': Mundo.objects.order_by('orden').first()}
+        )
     
     mundos = Mundo.objects.all().order_by('orden')
     
-    # Calculate stats for sidebar
+    # Calculate stats for sidebar and world states
     mundos_completados = 0
     total_mundos = mundos.count()
     
     for mundo in mundos:
-        if mundo.orden < progreso_usuario.mundo_actual.orden:
+        actividades = Actividad.objects.filter(temario__mundo=mundo)
+        total_act = actividades.count()
+        act_completadas = ProgresoActividad.objects.filter(
+            usuario=usuario,
+            actividad__in=actividades,
+            estado='completado'
+        ).count()
+        
+        es_completado = (total_act > 0 and act_completadas == total_act)
+        
+        if es_completado:
             mundo.estado = 'completado'
             mundos_completados += 1
-        elif mundo.orden == progreso_usuario.mundo_actual.orden:
+        elif progreso_usuario.mundo_actual and mundo.id == progreso_usuario.mundo_actual.id:
             mundo.estado = 'en_curso'
+        elif progreso_usuario.mundo_actual and mundo.orden < progreso_usuario.mundo_actual.orden:
+            mundo.estado = 'completado'
+            mundos_completados += 1
         else:
             mundo.estado = 'bloqueado'
-            # Prereq logic (just an example for the frontend)
-            mundo.prereq = Mundo.objects.filter(orden=mundo.orden-1).first()
+            mundo.prereq = Mundo.objects.filter(orden__lt=mundo.orden).order_by('-orden').first()
 
     context = {
         'mundos': mundos,
@@ -47,10 +65,13 @@ def temario_mundo(request, mundo_id):
     mundo = get_object_or_404(Mundo, id=mundo_id)
     request.session['mundo_id'] = mundo.id
     
-    progreso_usuario, _ = ProgresoUsuario.objects.get_or_create(
-        usuario=usuario, 
-        defaults={'mundo_actual_id': 1}
-    )
+    ops = OperacionesContenido()
+    progreso_usuario = ops.actualizar_progreso_mundo(usuario)
+    if not progreso_usuario:
+        progreso_usuario, _ = ProgresoUsuario.objects.get_or_create(
+            usuario=usuario, 
+            defaults={'mundo_actual': mundo}
+        )
     
     # Get all activities ordered by temario order and activity order
     temarios = Temario.objects.filter(mundo=mundo).order_by('orden')

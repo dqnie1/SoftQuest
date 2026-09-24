@@ -1,6 +1,6 @@
 from django.db.models import Sum
 
-from contenido.models import Mundo, ProgresoActividad, ProgresoUsuario, Usuario
+from contenido.models import Actividad, Mundo, ProgresoActividad, ProgresoUsuario, Usuario
 
 
 class OperacionesContenido:
@@ -199,3 +199,50 @@ class OperacionesContenido:
             usuario=usuario,
             defaults={'mundo_actual': actual},
         )
+
+    def actualizar_progreso_mundo(self, usuario):
+        if not usuario:
+            return None
+
+        mundos = list(Mundo.objects.all().order_by('orden'))
+        if not mundos:
+            return None
+
+        progreso_usuario, _ = ProgresoUsuario.objects.get_or_create(
+            usuario=usuario,
+            defaults={'mundo_actual': mundos[0]}
+        )
+
+        mundo_desbloqueado = mundos[0]
+
+        for i, mundo in enumerate(mundos):
+            actividades = Actividad.objects.filter(temario__mundo=mundo)
+            total_act = actividades.count()
+
+            if total_act == 0:
+                mundo_desbloqueado = mundo
+                break
+
+            completadas = ProgresoActividad.objects.filter(
+                usuario=usuario,
+                actividad__in=actividades,
+                estado=self.ESTADO_COMPLETADO
+            ).count()
+
+            if completadas == total_act:
+                # Mundo completado! Desbloquear siguiente si existe
+                if i + 1 < len(mundos):
+                    mundo_desbloqueado = mundos[i + 1]
+                else:
+                    # Todos los mundos completados
+                    mundo_desbloqueado = mundo
+            else:
+                # Mundo actual en curso
+                mundo_desbloqueado = mundo
+                break
+
+        if progreso_usuario.mundo_actual_id != mundo_desbloqueado.id:
+            progreso_usuario.mundo_actual = mundo_desbloqueado
+            progreso_usuario.save()
+
+        return progreso_usuario
