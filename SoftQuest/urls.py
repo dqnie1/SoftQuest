@@ -14,5 +14,5 @@ urlpatterns = [
     path('', include('minijuegos.match.urls')), #url de minijuego
 ]
 
-# urls de los archivos estatucos
-urlpatterns += static(settings.STATICFILES_DIRS, document_root=settings.STATICFILES_DIRS)
+# Servir archivos estaticos durante el desarrollo.
+urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
