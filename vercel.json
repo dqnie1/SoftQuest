@@ -1,0 +1,10 @@
+{
+    "builds":{
+        "src": "SoftQuest/wsgi.py",
+        "use": "@vercel/python"
+    },
+    "routes":{
+        "src":"/(.*)",
+        "dest": "SoftQuest/wsgi.py"
+    }
+}
