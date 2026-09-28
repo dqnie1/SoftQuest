@@ -42,7 +42,8 @@ SECRET_KEY = 'django-insecure-bxw7rg@b5^3r!e3y%cb#^!6nfwhta)u38dfu*dj6sz^fvt88@9
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+# aqui ponemos quien es el host
+ALLOWED_HOSTS = ['.vercel.app', 'localhost', '127.0.0.1']
 
 
 
@@ -65,12 +66,15 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # dependecias de deploy
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+   
 ]
 
 ROOT_URLCONF = 'SoftQuest.urls'
@@ -96,7 +100,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'SoftQuest.wsgi.application'
+WSGI_APPLICATION = 'SoftQuest.wsgi.app'
 
 
 # Database
@@ -158,6 +162,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 STATICFILES_DIRS = [
     #squi van las urls de los archivos de estilos
     BASE_DIR / 'contenido' / 'template' / 'style',
