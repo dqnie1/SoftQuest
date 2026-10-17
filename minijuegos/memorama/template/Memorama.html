@@ -90,14 +90,14 @@
             let primeraCarta = null;
             let segundaCarta = null;
 
-            let bloqueado = false;
+            let bloqueado = true;
             let intentos = 0;
             let aciertos = 0;
 
-            // Renderizar cartas obtenidas (Muestra pares en forma de cartas al revés)
+            // Mostrar brevemente las cartas al inicio para que el jugador las memorice.
             rawCartas.forEach((cartaData, index) => {
                 const button = document.createElement('button');
-                button.className = 'carta';
+                button.className = 'carta is-volteada';
                 button.dataset.parId = cartaData.parId;
                 button.dataset.index = index;
 
@@ -131,6 +131,13 @@
                 button.addEventListener('click', () => voltearCarta(button));
                 tablero.appendChild(button);
             });
+
+            setTimeout(() => {
+                document.querySelectorAll('.carta.is-volteada').forEach(carta => {
+                    carta.classList.remove('is-volteada');
+                });
+                bloqueado = false;
+            }, 2000);
 
             // Pasos 11-14: Selecciona cartas y muestra lado oculto
             function voltearCarta(carta) {

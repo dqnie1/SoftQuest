@@ -1,0 +1,59 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear cuenta - SoftQuest</title>
+    <link rel="stylesheet" href="{% static 'loginStyle.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-branding">
+            <div class="logo"><i class="fas fa-star" style="color: #f6c90e;"></i> SoftQuest</div>
+            <div class="branding-content">
+                <h1>Comienza tu<br><span class="text-yellow">aventura.</span></h1>
+                <p>Crea tu cuenta y guarda tu progreso mientras aprendes jugando.</p>
+            </div>
+        </div>
+        <div class="login-form-section">
+            <div class="form-container">
+                <h2>Crear una cuenta</h2>
+                <p class="subtitle">Completa tus datos para comenzar.</p>
+                <form method="post">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                        <div class="form-errors" role="alert">{{ form.non_field_errors }}</div>
+                    {% endif %}
+                    {% for field in form %}
+                        <div class="form-group{% if field.name == 'password2' %} password-confirmation{% endif %}"{% if field.name == 'password2' and not form.data.password1 and not field.errors %} hidden{% endif %}>
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            <div class="input-wrapper">{{ field }}</div>
+                            {% if field.errors %}
+                                <div class="field-errors" role="alert">
+                                    {% for error in field.errors %}<p>{{ error }}</p>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                    <button type="submit" class="btn-primary">Crear cuenta</button>
+                </form>
+                <div class="divider"><span>¿Ya tienes una cuenta?</span></div>
+                <a href="{% url 'login' %}" class="btn-secondary">Iniciar sesión</a>
+            </div>
+        </div>
+    </div>
+    <script>
+        const password = document.getElementById('id_password1');
+        const confirmation = document.querySelector('.password-confirmation');
+
+        password.addEventListener('input', () => {
+            if (password.value.length > 0) {
+                confirmation.hidden = false;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 import json
 
+from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_POST
@@ -10,6 +11,7 @@ from .models import Concepto
 from .operaciones.OperacionesMatch import OperacionesMatch
 
 
+@login_required
 def obtenerConceptos(request, id_match=None):
     conceptos = OperacionesMatch().obtenerTerminosYDefinicionesRevuelta(id_match)
 
@@ -21,6 +23,7 @@ def obtenerConceptos(request, id_match=None):
 
 
 @require_POST
+@login_required
 def validar_match(request):
     try:
         datos = json.loads(request.body)
@@ -67,6 +70,7 @@ def validar_match(request):
 
 
 @require_POST
+@login_required
 def guardar_progreso(request):
     try:
         datos = json.loads(request.body)

@@ -1,0 +1,271 @@
+/* Reseteo básico y fuente global */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+    min-height: 100vh;
+    background-color: #f9f8fd; /* Color de fondo claro de la derecha */
+}
+
+/* Contenedor principal de pantalla dividida */
+.login-container {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    min-height: 100vh;
+}
+
+/* =========================================
+   LADO IZQUIERDO: Branding (Morado)
+========================================= */
+.login-branding {
+    min-width: 0;
+    background: linear-gradient(145deg, #442295, #351578); /* Degradado morado */
+    color: white;
+    padding: 40px 60px;
+    display: flex;
+    flex-direction: column;
+}
+
+.logo {
+    font-size: 18px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.branding-content {
+    margin-top: 120px;
+    max-width: 450px;
+}
+
+.branding-content h1 {
+    font-size: 3.2rem;
+    font-weight: 600;
+    line-height: 1.2;
+    margin-bottom: 20px;
+}
+
+.text-yellow {
+    color: #ffca28; /* Amarillo de la fuente */
+}
+
+.branding-content p {
+    font-size: 1.05rem;
+    line-height: 1.6;
+    color: #c9b9ee; /* Morado claro para el texto secundario */
+}
+
+/* =========================================
+   LADO DERECHO: Formulario
+========================================= */
+.login-form-section {
+    min-width: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f9f8fd;
+    padding: 32px 20px;
+}
+
+.form-container {
+    width: 100%;
+    max-width: 420px;
+}
+
+.form-container h2 {
+    font-size: 2rem;
+    color: #3b2a63;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.subtitle {
+    color: #8c85a1;
+    margin-bottom: 35px;
+    font-size: 0.95rem;
+}
+
+/* Elementos del formulario */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+label {
+    display: block;
+    font-size: 0.9rem;
+    color: #554b73;
+    margin-bottom: 8px;
+}
+
+.forgot-password {
+    font-size: 0.85rem;
+    color: #7b4fff;
+    text-decoration: none;
+}
+
+.forgot-password:hover {
+    text-decoration: underline;
+}
+
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: white;
+    border: 1px solid #e2dcf4;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+
+.input-wrapper:focus-within {
+    border-color: #7b4fff;
+}
+
+.icon-left {
+    color: #a7a1c0;
+    padding-left: 15px;
+    font-size: 1.1rem;
+}
+
+.icon-right {
+    color: #a7a1c0;
+    padding-right: 15px;
+    cursor: pointer;
+}
+
+.input-wrapper input {
+    width: 100%;
+    border: none;
+    padding: 14px 12px;
+    outline: none;
+    font-size: 0.95rem;
+    color: #333;
+    background: transparent;
+}
+
+.input-wrapper input::placeholder {
+    color: #c0bacc;
+}
+
+/* Botones */
+.btn-primary {
+    width: 100%;
+    background-color: #ffca28; /* Botón Amarillo */
+    color: #333;
+    border: none;
+    padding: 14px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 15px;
+    transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+    background-color: #f0b90e;
+}
+
+.btn-secondary {
+    display: block;
+    text-align: center;
+    width: 100%;
+    background-color: transparent;
+    color: #7b4fff;
+    border: 1px solid #7b4fff; /* Borde morado */
+    padding: 13px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+    background-color: #f1ecff;
+}
+
+.form-errors,
+.field-errors {
+    color: #b42318;
+    font-size: 0.875rem;
+    margin: 0 0 12px;
+}
+
+.form-errors ul,
+.field-errors ul {
+    list-style: none;
+}
+
+.field-errors p + p {
+    margin-top: 4px;
+}
+
+.password-confirmation[hidden] {
+    display: none;
+}
+
+/* Divisor "¿Nuevo en SoftQuest?" */
+.divider {
+    text-align: center;
+    margin: 25px 0;
+    position: relative;
+}
+
+.divider::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: #e2dcf4;
+    z-index: 1;
+}
+
+.divider span {
+    background-color: #f9f8fd; /* Igual al fondo de la vista derecha */
+    padding: 0 15px;
+    color: #a7a1c0;
+    font-size: 0.85rem;
+    position: relative;
+    z-index: 2;
+}
+
+/* Responsividad (Para pantallas más pequeñas) */
+@media (max-width: 900px) {
+    .login-container {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    
+    .login-branding {
+        padding: 40px 30px;
+        min-height: 40vh;
+    }
+    
+    .branding-content {
+        margin-top: 40px;
+    }
+    
+    .login-form-section {
+        padding: 40px 20px;
+    }
+}
