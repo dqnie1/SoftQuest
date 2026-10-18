@@ -1,18 +1,13 @@
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.http import Http404
-from .models import Mundo, Temario, Actividad, ProgresoUsuario, ProgresoActividad, Usuario
+from .models import Mundo, Temario, Actividad, ProgresoUsuario, ProgresoActividad
 from .operaciones.OperacionesContenido import OperacionesContenido
 
-def get_current_user():
-    # Helper for the mock user until auth is implemented
-    user = Usuario.objects.first()
-    if not user:
-        user = Usuario.objects.create(nombre="Estudiante", email="estudiante@softquest.com")
-    return user
-
+@login_required
 def mapa_mundos(request):
-    usuario = get_current_user()
+    usuario = OperacionesContenido().obtener_usuario(request)
     ops = OperacionesContenido()
     progreso_usuario = ops.actualizar_progreso_mundo(usuario)
     if not progreso_usuario:
@@ -60,8 +55,9 @@ def mapa_mundos(request):
     }
     return render(request, 'mapa_mundos.html', context)
 
+@login_required
 def temario_mundo(request, mundo_id):
-    usuario = get_current_user()
+    usuario = OperacionesContenido().obtener_usuario(request)
     mundo = get_object_or_404(Mundo, id=mundo_id)
     request.session['mundo_id'] = mundo.id
     

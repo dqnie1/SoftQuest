@@ -7,6 +7,7 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', include('login.urls')),
     path('', lambda request: redirect('mapa_mundos')),
     path('', include('contenido.urls')),
     path('', include('minijuegos.memorama.urls')),

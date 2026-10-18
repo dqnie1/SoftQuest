@@ -51,6 +51,10 @@
                 </div>
                 <div class="progress-badge" style="width:auto; padding:0 8px;">{{ actividades_completadas }}/{{ total_actividades }}</div>
             </div>
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit">Cerrar sesión</button>
+            </form>
         </header>
 
         <div class="content-wrapper">
@@ -296,4 +300,3 @@
     </script>
 </body>
 </html>
-

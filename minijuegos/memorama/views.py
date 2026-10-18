@@ -1,15 +1,17 @@
 import json
 
+from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_POST
 
-from contenido.models import Actividad, ProgresoActividad, Usuario
+from contenido.models import Actividad, ProgresoActividad
 from contenido.operaciones.OperacionesContenido import OperacionesContenido
 from .models import Par
 from .operaciones.OperacionesMemorama import OperacionesMemorama
 
 
+@login_required
 def obetenerPares(request, id_memorama=None):
     pares = Par.todos_los_pares(id_memorama) or []
     pares = OperacionesMemorama().revolverPares(pares)
@@ -22,6 +24,7 @@ def obetenerPares(request, id_memorama=None):
 
 
 @require_POST
+@login_required
 def validar_par(request):
     try:
         datos = json.loads(request.body)
@@ -35,6 +38,7 @@ def validar_par(request):
 
 
 @require_POST
+@login_required
 def guardar_progreso(request):
     try:
         datos = json.loads(request.body)
@@ -43,7 +47,6 @@ def guardar_progreso(request):
     except (TypeError, ValueError, KeyError, json.JSONDecodeError):
         return JsonResponse({'guardado': False, 'error': 'Datos invalidos'}, status=400)
 
-    # solo para la demo
     usuario = OperacionesContenido().obtener_usuario(request)
 
     if usuario is None:

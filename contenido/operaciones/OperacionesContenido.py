@@ -1,21 +1,24 @@
 from django.db.models import Sum
 
-from contenido.models import Actividad, Mundo, ProgresoActividad, ProgresoUsuario, Usuario
+from contenido.models import Actividad, Mundo, ProgresoActividad, ProgresoUsuario
+from login.models import Usuario
 
 
 class OperacionesContenido:
     ESTADO_COMPLETADO = 'completado'
 
     def obtener_usuario(self, request):
-        uid = request.session.get('usuario_id')
-        if uid:
-            usuario = Usuario.objects.filter(pk=uid).first()
-            if usuario:
-                return usuario
+        if not request.user.is_authenticated:
+            return None
 
-        usuario = Usuario.objects.order_by('id').first()
-        if usuario:
-            request.session['usuario_id'] = usuario.id
+        nombre = request.user.get_full_name() or request.user.get_username()
+        usuario, _ = Usuario.objects.get_or_create(
+            cuenta=request.user,
+            defaults={
+                'nombre': nombre,
+                'email': request.user.email,
+            },
+        )
         return usuario
 
     def progresos_por_actividad(self, usuario):

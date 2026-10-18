@@ -162,6 +162,16 @@ body {
     flex: 1;
 }
 
+.topbar form button {
+    background: transparent;
+    border: 1px solid var(--primary-color);
+    border-radius: 6px;
+    color: var(--primary-color);
+    cursor: pointer;
+    font: inherit;
+    padding: 8px 12px;
+}
+
 .progress-label {
     font-size: 0.75rem;
     font-weight: 600;

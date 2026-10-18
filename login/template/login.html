@@ -1,0 +1,83 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - SoftQuest</title>
+    <link rel="stylesheet" href="{% static 'loginStyle.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="login-container">
+        
+        <div class="login-branding">
+            <div class="logo">
+                <i class="fas fa-star" style="color: #f6c90e;"></i> SoftQuest
+            </div>
+            
+            <div class="branding-content">
+                <h1>Conoce jugando,<br><span class="text-yellow">crece compitiendo.</span></h1>
+                <p>Trivias, juegos de match, memoramas  y mas diseñados para que domines Ingeniería de Software sin aburrirte.</p>
+            </div>
+        </div>
+
+        <div class="login-form-section">
+            <div class="form-container">
+                <h2>Bienvenido de vuelta</h2>
+                <p class="subtitle">Ingresa tus credenciales para continuar tu aventura.</p>
+
+                <form method="post">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                        <div class="form-errors" role="alert">{{ form.non_field_errors }}</div>
+                    {% endif %}
+                    {% if next %}
+                        <input type="hidden" name="next" value="{{ next }}">
+                    {% endif %}
+                    
+                    <div class="form-group">
+                        <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+                        <div class="input-wrapper">
+                            <i class="far fa-user icon-left"></i>
+                            {{ form.username }}
+                        </div>
+                        {% if form.username.errors %}
+                            <div class="field-errors" role="alert">
+                                {% for error in form.username.errors %}<p>{{ error }}</p>{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <div class="label-row">
+                            <label for="{{ form.password.id_for_label }}">Contraseña</label>
+                        </div>
+                        <div class="input-wrapper">
+                            <i class="fas fa-lock icon-left"></i>
+                            {{ form.password }}
+                        </div>
+                        {% if form.password.errors %}
+                            <div class="field-errors" role="alert">
+                                {% for error in form.password.errors %}<p>{{ error }}</p>{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-star"></i> Iniciar sesión
+                    </button>
+                </form>
+
+                <div class="divider">
+                    <span>¿Nuevo en SoftQuest?</span>
+                </div>
+
+                <a href="{% url 'registro' %}" class="btn-secondary">Crear una cuenta gratis</a>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

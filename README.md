@@ -42,4 +42,17 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
+## Autenticación
+
+La aplicación usa la autenticación integrada de Django. Antes del primer inicio,
+aplica las migraciones:
+
+```bash
+python manage.py migrate
+```
+
+Las personas pueden crear su cuenta en `/registro/` e iniciar sesión en `/login/`
+con su nombre de usuario o correo electrónico. Cada cuenta se vincula a un perfil
+`login.Usuario`; los registros de progreso en `contenido` apuntan a ese perfil.
+
 ---

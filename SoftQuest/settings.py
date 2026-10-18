@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'minijuegos.trivia',
     'minijuegos.match',
     'contenido', # exploracion de mundos y temarios
+    'login',
 ]
 
 MIDDLEWARE = [
@@ -85,6 +86,7 @@ TEMPLATES = [
         # Ruta de la carpeta de los templates
         'DIRS': [
             BASE_DIR / 'contenido' / 'template',
+            BASE_DIR / 'login' / 'template',
             BASE_DIR / 'minijuegos' / 'memorama' / 'template',
             BASE_DIR / 'minijuegos' / 'trivia' / 'template',
             BASE_DIR / 'minijuegos' / 'match' / 'template',
@@ -169,6 +171,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 STATICFILES_DIRS = [
     #squi van las urls de los archivos de estilos
     BASE_DIR / 'contenido' / 'template' / 'style',
+    BASE_DIR / 'login' / 'template' / 'style',
     BASE_DIR / 'minijuegos' / 'memorama' / 'template' / 'style',
     BASE_DIR / 'minijuegos' / 'match' / 'template' / 'style',
     BASE_DIR / 'minijuegos' / 'trivia' / 'template' / 'style',
@@ -184,3 +187,9 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+
+# urls para el login
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'mapa_mundos'
+LOGOUT_REDIRECT_URL = 'login'

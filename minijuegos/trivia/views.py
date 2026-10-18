@@ -1,5 +1,6 @@
 import json
 
+from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_POST
@@ -10,6 +11,7 @@ from .models import Pregunta, Respuesta, Trivia
 from .operaciones.OperacionesTrivia import OperacionesTrivia
 
 
+@login_required
 def obtener_preguntas(request, id_trivia=None):
     ops = OperacionesTrivia()
     preguntas = Pregunta.todas_las_preguntas(id_trivia) or []
@@ -45,6 +47,7 @@ def obtener_preguntas(request, id_trivia=None):
 
 
 @require_POST
+@login_required
 def validar_respuesta(request):
     try:
         datos = json.loads(request.body)
@@ -79,6 +82,7 @@ def validar_respuesta(request):
 
 
 @require_POST
+@login_required
 def guardar_progreso(request):
     try:
         datos = json.loads(request.body)
