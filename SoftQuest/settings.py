@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     'minijuegos.memorama',
     'minijuegos.trivia',
     'minijuegos.match',
+    'minijuegos.pacman',
     'contenido', # exploracion de mundos y temarios
     'login',
 ]
@@ -90,6 +91,7 @@ TEMPLATES = [
             BASE_DIR / 'minijuegos' / 'memorama' / 'template',
             BASE_DIR / 'minijuegos' / 'trivia' / 'template',
             BASE_DIR / 'minijuegos' / 'match' / 'template',
+            BASE_DIR / 'minijuegos' / 'pacman' / 'templates',
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -175,6 +177,7 @@ STATICFILES_DIRS = [
     BASE_DIR / 'minijuegos' / 'memorama' / 'template' / 'style',
     BASE_DIR / 'minijuegos' / 'match' / 'template' / 'style',
     BASE_DIR / 'minijuegos' / 'trivia' / 'template' / 'style',
+    BASE_DIR / 'minijuegos' / 'pacman' / 'templates' / 'style',
 ]
 
 
