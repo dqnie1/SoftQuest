@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ actividad.titulo }} - SoftQuest</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap"
+        rel="stylesheet">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'pacmanStyle.css' %}">
+</head>
+
+<body>
+    <header class="top">
+        <div class="brand"><svg viewBox="0 0 24 24" fill="#5B5BF0">
+                <path d="M13 2 4 14h6l-1 8 9-12h-6z" />
+            </svg>SoftQuest</div>
+        <span class="plabel">PROGRESO</span>
+        <div class="ptrack">
+            <div class="pfill" id="pbar"></div>
+        </div>
+        <span class="ppill" id="ppill">0/0</span>
+    </header>
+    <main class="game-container">
+
+        <div>
+            <div class="mission" id="mission"></div>
+            <div class="board">
+                <canvas id="game" width="608" height="608"></canvas>
+                <div class="overlay" id="overlay">
+                    <h2 id="ovT"></h2>
+                    <div id="ovD"></div>
+                    <button class="btn" id="ovB" onclick="overlayBtn()"></button>
+                    <button class="btn ghost" id="ovBack" onclick="volver()">Volver al temario</button>
+                </div>
+            </div>
+            <div class="toast" id="toast"></div>
+            <div class="dpad">
+                <button data-d="0,-1" style="grid-area:u">▲</button>
+                <button data-d="-1,0" style="grid-area:l">◀</button>
+                <button data-d="1,0" style="grid-area:r">▶</button>
+                <button data-d="0,1" style="grid-area:d">▼</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h1>CODEPATH</h1>
+            <div class="subtitle">Reconstruye el programa</div>
+            <div class="lvs" id="lvs"></div>
+            <div class="stats">
+                <div class="stat gold">
+                    <div class="label">PUNTOS</div>
+                    <div class="value" id="score">0</div>
+                </div>
+                <div class="stat">
+                    <div class="label">LÍNEAS</div>
+                    <div class="value" id="lines">0</div>
+                </div>
+                <div class="stat">
+                    <div class="label">VIDAS</div>
+                    <div class="value" id="lives"></div>
+                </div>
+                <div class="stat">
+                    <div class="label">DEBUG</div>
+                    <div class="value" id="debug">OFF</div>
+                </div>
+            </div>
+            <div class="section">
+                <div class="section-title">ASÍ VAS ARMANDO EL PROGRAMA</div>
+                <div id="prog"></div>
+            </div>
+            <div class="message" id="message"></div>
+            <div class="objective">WASD / flechas / deslizar · <b>M</b> sonido · <b>R</b> reiniciar nivel</div>
+            <button class="btn" onclick="loadLevel(lvl)">Reiniciar nivel</button>
+        </div>
+
+    </main>
+
+    {# ---- Datos y configuración que entrega Django ---- #}
+    {{ niveles|json_script:"pacman-niveles" }}
+    {{ mapa|json_script:"pacman-mapa" }}
+    <script>
+        const CFG = {
+            csrf: "{{ csrf_token }}",
+            urlTemario: "{{ url_temario|escapejs }}",
+            zonas: { columnas: {{ zonas_columnas }}, filas: {{ zonas_filas }} },
+            urls: {
+                iniciar: "{% url 'pacman:iniciar' actividad.pk %}",
+                recoger: "{% url 'pacman:recoger' actividad.pk %}",
+                bug: "{% url 'pacman:bug' actividad.pk %}",
+                zona: "{% url 'pacman:zona' actividad.pk %}",
+                finalizar: "{% url 'pacman:finalizar' actividad.pk %}"
+            }
+        };
+    </script>
+
+    {% verbatim %}
+    <script>
+        const $ = id => document.getElementById(id);
+        const cv = $("game"), ctx = cv.getContext("2d");
+        const T = 32, STEP = 130, LIVES = 3;
+        const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+        const MAPA = JSON.parse($("pacman-mapa").textContent);
+        const LV = JSON.parse($("pacman-niveles").textContent);   // lista de PACMAN_LINEAs ya revuelta por el servidor
+        const D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+        const KEYS = { arrowup: [0, -1], w: [0, -1], arrowdown: [0, 1], s: [0, 1], arrowleft: [-1, 0], a: [-1, 0], arrowright: [1, 0], d: [1, 0] };
+        const zoneOf = (x, y) => Math.floor(y * CFG.zonas.filas / MAPA.length) * CFG.zonas.columnas + Math.floor(x * CFG.zonas.columnas / MAPA[0].length);
+
+        let lvl = 0, map, walls, player, enemies = [], items = [], got = [], lines = [], total = 0;
+        let pistaSig = "", siguienteId = null, zonas = new Set();
+        let results = [], lives = LIVES, srvScore = 0, extra = 0, debugUntil = 0, hurtUntil = 0, over = null, popups = [];
+        let muted = false, held = null, heldKey = null, lastMove = 0;
+        const score = () => srvScore + extra;   // puntaje del servidor + puntitos/debug/bugs eliminados (local)
+
+        const preview = c => { c = c.trim(); return c.length > 22 ? c.slice(0, 21) + "…" : c; };
+        const ent = (x, y) => ({ x, y, sx: x, sy: y, px: x, py: y, rx: x, ry: y, wake: 0, nx: 0, iv: 560 });
+        const now = () => performance.now();
+        const isWall = (x, y) => !map[y] || !map[y][x] || map[y][x] === "#";
+
+        /* ---------- Comunicación con el servidor ----------
+           colaJuego: acciones críticas en orden (iniciar, recoger, bug, finalizar)
+           colaZona:  puntos de zona — no bloquean la cola principal
+        ---------------------------------------------------*/
+        let colaJuego = Promise.resolve();
+        let colaZona  = Promise.resolve();
+        function _fetch(nombre, datos) {
+            return fetch(CFG.urls[nombre], {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-CSRFToken": CFG.csrf },
+                body: JSON.stringify(datos || {})
+            }).then(async r => {
+                const j = await r.json().catch(() => ({}));
+                if (!r.ok) { const e = new Error(j.error || r.status); e.status = r.status; throw e; }
+                return j;
+            });
+        }
+        function api(nombre, datos) {
+            // zona usa su propia cola para no bloquear acciones del juego
+            if (nombre === "zona") {
+                const p = colaZona.then(() => _fetch(nombre, datos));
+                colaZona = p.catch(() => {});
+                return p;
+            }
+            const p = colaJuego.then(() => _fetch(nombre, datos));
+            colaJuego = p.catch(() => {});
+            return p;
+        }
+        function fallo(e) {
+            if (e && e.status === 409) { alert("La partida expiró. Se recargará la página."); location.reload(); return; }
+            if (over === "loading" || over === "finishing") over = "error";
+            showMessage(`⚠️ <b class="bad">No se pudo comunicar con el servidor.</b><br>Presiona <b>R</b> para reintentar.`);
+        }
+
+        function volver() {
+            if (!over && got.length && !confirm("¿Salir al temario? Perderás el avance de este nivel.")) return;
+            location.href = CFG.urlTemario;
+        }
+
+        function beep(f, d = .08, type = "square") {
+            if (muted) return;
+            try {
+                window.ac = window.ac || new AudioContext();
+                const o = ac.createOscillator(), g = ac.createGain();
+                o.type = type; o.frequency.value = f; g.gain.value = .04;
+                o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + d);
+            } catch (e) { }
+        }
+
+        function buildWalls() {
+            walls = document.createElement("canvas"); walls.width = walls.height = 608;
+            const g = walls.getContext("2d"), w = (x, y) => map[y]?.[x] === "#";
+            g.fillStyle = "#E4E7FF";
+            for (let y = 0; y < map.length; y++) for (let x = 0; x < map[y].length; x++) if (w(x, y)) g.fillRect(x * T, y * T, T, T);
+            g.strokeStyle = "#5B5BF0"; g.lineWidth = 3; g.lineCap = "round";
+            g.beginPath();
+            for (let y = 0; y < map.length; y++) for (let x = 0; x < map[y].length; x++) {
+                if (!w(x, y)) continue;
+                const px = x * T, py = y * T;
+                if (!w(x, y - 1)) { g.moveTo(px, py + 2); g.lineTo(px + T, py + 2); }
+                if (!w(x, y + 1)) { g.moveTo(px, py + T - 2); g.lineTo(px + T, py + T - 2); }
+                if (!w(x - 1, y)) { g.moveTo(px + 2, py); g.lineTo(px + 2, py + T); }
+                if (!w(x + 1, y)) { g.moveTo(px + T - 2, py); g.lineTo(px + T - 2, py + T); }
+            }
+            g.stroke();
+        }
+
+        let _distCache = null, _distCacheX = -1, _distCacheY = -1;
+        function distMap(sx, sy) {
+            // Reusar el BFS si el jugador no se movio desde la última vez
+            if (_distCache && _distCacheX === sx && _distCacheY === sy) return _distCache;
+            const d = map.map(r => r.map(() => -1)), q = [[sx, sy]]; d[sy][sx] = 0;
+            for (let i = 0; i < q.length; i++) {
+                const [x, y] = q[i];
+                for (const [a, b] of D4) {
+                    const nx = x + a, ny = y + b;
+                    if (!isWall(nx, ny) && d[ny][nx] < 0) { d[ny][nx] = d[y][x] + 1; q.push([nx, ny]); }
+                }
+            }
+            _distCache = d; _distCacheX = sx; _distCacheY = sy;
+            return d;
+        }
+        function invalidarDistMap() { _distCache = null; }
+
+        /* Casilla libre al azar, lejos del jugador y sin enemigos ni otras líneas encima */
+        function freeCell() {
+            const d = distMap(player.x, player.y), c = [];
+            for (let y = 0; y < map.length; y++) for (let x = 0; x < map[y].length; x++) {
+                if (isWall(x, y) || d[y][x] < 5) continue;
+                if (items.some(i => i.x === x && i.y === y) || enemies.some(e => e.x === x && e.y === y)) continue;
+                c.push([x, y]);
+            }
+            return c[Math.random() * c.length | 0] || [player.sx, player.sy];
+        }
+
+        /* Muestra el tablero con las PACMAN_LINEAs y pide al servidor iniciar el nivel */
+        async function loadLevel(i, nuevoJuego = false) {
+            if (over === "loading" || over === "finishing") return;
+            over = "loading"; lvl = i;
+            if (!LV || !LV[i]) return;
+            const L = LV[i];
+            map = MAPA.map(r => r.split(""));
+            items = []; got = []; popups = []; zonas = new Set();
+            lives = LIVES; debugUntil = 0; hurtUntil = 0; extra = 0; pistaSig = ""; siguienteId = null;
+            lines = L.lineas || []; total = L.total_lineas || lines.length;
+            map.forEach((r, y) => r.forEach((c, x) => { if (c === "P") { player = ent(x, y); r[x] = " "; } }));
+            zonas.add(zoneOf(player.x, player.y));
+
+            const spawns = [];
+            map.forEach((r, y) => r.forEach((c, x) => { if (c === "D") spawns.push({ x, y }); }));
+            const defSpawns = spawns.length > 0 ? spawns : [{ x: 9, y: 9 }];
+            const numE = L.num_enemigos != null ? L.num_enemigos : 1;
+            const rawEnemies = (L.enemigos && L.enemigos.length > 0) ? L.enemigos : Array.from({ length: numE }, (_, k) => ({
+                x: defSpawns[k % defSpawns.length].x,
+                y: defSpawns[k % defSpawns.length].y,
+                intervalo_ms: L.velocidad_ms || 560,
+                espera_ms: (L.espera_inicial_ms || 2000) + k * (L.espera_entre_enemigos_ms || 1500)
+            }));
+            enemies = rawEnemies.map(e => Object.assign(ent(e.x, e.y), { iv: e.intervalo_ms || 560, wake: now() + (e.espera_ms || 1500) }));
+            buildWalls();
+            lines.forEach(l => { const [x, y] = freeCell(); items.push({ l, x, y }); });
+            $("overlay").classList.remove("show"); $("toast").innerHTML = TOAST0;
+            $("lvs").innerHTML = LV.map((l, k) => `<button class="lv${k === i ? " on" : ""}" onclick="jump(${k})">${k + 1}</button>`).join("");
+            showMessage("Cargando nivel…");
+            updateUI();
+
+            try {
+                const r = await api("iniciar", { nivel_id: L.id, nuevo_juego: nuevoJuego });
+                srvScore = r.puntaje; lives = r.vidas;
+                pistaSig = r.siguiente.pista; siguienteId = r.siguiente.id;
+            } catch (e) { return fallo(e); }
+            over = null;
+            showMessage(`Recoge las líneas <b>en orden</b>: la pista de arriba dice cuál sigue.`);
+            updateUI();
+        }
+        function jump(i) { results = []; loadLevel(i, true); }
+
+        function showMessage(t) { $("message").innerHTML = t; }
+        const TOAST0 = "📖 Aquí verás la explicación de cada línea que recojas.";
+        function toast(t) { $("toast").innerHTML = t; }
+        function pop(s) { popups.push({ x: player.x, y: player.y, s, t: now() }); }
+
+        function updateUI() {
+            const L = LV[lvl], n = total;
+            $("score").textContent = score();
+            $("lines").textContent = got.length + "/" + n;
+            $("lives").textContent = "❤️".repeat(Math.max(lives, 0)) + "🖤".repeat(Math.max(LIVES - lives, 0));
+            const pasados = results.filter(Boolean).length;
+            $("pbar").style.width = (pasados / LV.length * 100) + "%"; $("ppill").textContent = pasados + "/" + LV.length;
+            $("debug").textContent = now() < debugUntil ? "ON" : "OFF";
+            $("mission").innerHTML = over === "done"
+                ? `<small>NIVEL ${lvl + 1} DE ${LV.length} · ${esc(L.titulo).toUpperCase()}</small>¡Programa completo!`
+                : `<small>NIVEL ${lvl + 1} DE ${LV.length} · LÍNEA ${Math.min(got.length + 1, n)} DE ${n}</small>Busca la línea que <b>${pistaSig ? esc(pistaSig) : "…"}</b>.<br><span class="sub">Cada objeto del mapa muestra un fragmento de código. Si un 👾 te alcanza, pierdes una vida y la última línea.</span>`;
+            $("prog").innerHTML = Array.from({ length: n }, (_, i) => {
+                if (i < got.length) {
+                    const l = got[i];
+                    return `<div class="ln done"><i class="ic ok">✓</i><div><code>${esc(l.codigo)}</code><span>${l.explicacion || ""}</span></div></div>`;
+                }
+                return i === got.length
+                    ? `<div class="ln next"><i class="ic go">▶</i><div><b>Línea ${i + 1}</b><span>la que ${esc(pistaSig)}</span></div></div>`
+                    : `<div class="ln"><i class="ic">${i + 1}</i><div>Línea ${i + 1}</div></div>`;
+            }).join("");
+        }
+
+        function tryMove(dx, dy) {
+            if (over) return;
+            const nx = player.x + dx, ny = player.y + dy;
+            if (isWall(nx, ny)) return;
+            player.px = player.x; player.py = player.y; player.x = nx; player.y = ny;
+            invalidarDistMap();  // jugador se movió, invalidar caché BFS
+            processCell(); collide(); updateUI();
+        }
+
+        function processCell() {
+            const c = map[player.y][player.x];
+            if (c === ".") { map[player.y][player.x] = " "; extra += 5; beep(660, .04); }
+            if (c === "D") {
+                map[player.y][player.x] = " "; debugUntil = now() + 7000; extra += 50; beep(880, .15, "triangle");
+                showMessage(`🔧 <b class="good">DEBUG MODE</b> (7 s)<br>Los bugs huyen, puedes eliminarlos y la línea correcta brilla en verde.`);
+            }
+
+            /* Zona nueva explorada -> sumarPuntos(zona) */
+            const z = zoneOf(player.x, player.y);
+            if (!zonas.has(z)) {
+                zonas.add(z);
+                api("zona", { x: player.x, y: player.y }).then(r => {
+                    srvScore = r.puntaje;
+                    if (r.puntos) { pop("+" + r.puntos + " zona"); beep(520, .1, "triangle"); }
+                    updateUI();
+                }).catch(fallo);
+            }
+
+            /* Línea del reto -> validarOrdenFragmento */
+            const it = items.find(i => i.x === player.x && i.y === player.y);
+            if (it && !it.busy) {
+                it.busy = true;
+                api("recoger", { linea_id: it.l.id }).then(r => {
+                    it.busy = false;
+                    if (!r.correcto) {
+                        pistaSig = r.siguiente.pista;
+                        beep(200, .12, "sawtooth");
+                        toast(`⛔ <b>Todavía no es esta línea.</b><br>Ahora busca la <b>línea ${got.length + 1}</b>: la que ${esc(pistaSig)}.`);
+                        updateUI(); return;
+                    }
+                    items.splice(items.indexOf(it), 1);
+                    it.l.explicacion = r.explicacion;
+                    got.push(it.l);
+                    srvScore = r.puntaje; pop("+" + r.puntos); beep(784, .15, "triangle");
+                    if (r.siguiente) { pistaSig = r.siguiente.pista; siguienteId = r.siguiente.id; }
+                    toast(`📥 <b>Línea ${got.length} recogida</b><code>${esc(it.l.codigo)}</code>${r.explicacion}` +
+                        (r.siguiente ? `<br>➡ <b>Sigue:</b> la línea que ${esc(r.siguiente.pista)}.` : ""));
+                    showMessage(`Faltan <b>${items.length}</b> líneas.`);
+                    updateUI();
+                    if (r.completado) completeLevel();
+                }).catch(e => { it.busy = false; fallo(e); });
+            }
+        }
+
+        function summaryHTML() {
+            const r = results.filter(Boolean), tl = r.reduce((a, x) => a + x.n, 0), tb = r.reduce((a, x) => a + x.bugs, 0);
+            return `<b>Resumen de la partida</b><table class="sum"><tr><th>Nivel</th><th>Líneas</th><th>Vidas</th><th>Bugs</th><th>Puntos</th></tr>` +
+                LV.map((l, i) => results[i] ? `<tr><td>${i + 1}. ${esc(results[i].t)}</td><td>${results[i].n}/${results[i].n}</td><td>${"❤️".repeat(results[i].lives)}</td><td>${results[i].bugs}</td><td>${results[i].pts}</td></tr>` : "").join("") +
+                `<tr class="tot"><td>Total</td><td>${tl}</td><td></td><td>${tb}</td><td>${score()}</td></tr></table>` +
+                (r.length < LV.length ? `<div class="note">Solo se cuentan los niveles que jugaste en esta partida.</div>` : "");
+        }
+
+        /* Último fragmento -> calcularResumenNivel + guardarProgresoActividad + desbloquearSiguienteActividad */
+        function completeLevel() {
+            over = "finishing";
+            api("finalizar", { puntos_extra: extra }).then(r => {
+                const R = r.resumen, last = r.es_ultimo;
+                srvScore = R.puntaje_total; extra = 0;
+                results[lvl] = { t: R.titulo, n: R.n, bugs: R.bugs, lives: R.vidas, pts: R.puntos_nivel };
+                over = "done"; beep(988, .4, "triangle");
+                const unlock = r.desbloqueada ? `<br><span class="good">🔓 Se desbloqueó la siguiente actividad</span>` : "";
+                $("ovT").textContent = last ? "🏆 ¡Completaste todos los niveles!" : `🎉 Nivel ${lvl + 1} completado`;
+                $("ovD").innerHTML = last
+                    ? summaryHTML() + unlock
+                    : `<pre class="pre">${R.codigo.map(c => esc(c)).join("\n")}</pre>
+         Salida: <b class="good">${esc(R.salida)}</b><br><br>Bonus por pocos bugs: <b>+${R.bonus}</b> · Puntos: <b>${score()}</b>`;
+                $("ovBack").style.display = last ? "" : "none";
+                $("ovB").textContent = last ? "Jugar de nuevo (Enter)" : "Siguiente nivel ▶ (Enter)";
+                $("overlay").classList.add("show");
+                updateUI();
+            }).catch(fallo);
+        }
+
+        function gameOver() {
+            over = "lose"; lives = 0; beep(120, .5, "sawtooth");
+            $("ovT").textContent = "💀 Te quedaste sin vidas";
+            $("ovD").innerHTML = `Los bugs rompieron el programa.<br>Llevabas <b>${got.length}</b> de <b>${total}</b> líneas.<br><br>Puntos: <b>${score()}</b>`;
+            $("ovBack").style.display = "none";
+            $("ovB").textContent = "Reintentar nivel (Enter)";
+            $("overlay").classList.add("show");
+            updateUI();
+        }
+
+        /* Un bug alcanzó al jugador -> quitarVida / devolverFragmentoAlTablero */
+        function golpeDeBug() {
+            api("bug").then(r => {
+                srvScore = r.puntaje; lives = r.vidas;
+                if (r.game_over) return gameOver();
+                if (r.siguiente) { pistaSig = r.siguiente.pista; siguienteId = r.siguiente.id; }
+                if (r.devuelta) {
+                    const l = lines.find(x => x.id === r.devuelta), [x, y] = freeCell();
+                    got = got.filter(g => g !== l);
+                    items.push({ l, x, y }); pop("-1 línea");
+                    showMessage(`👾 <b class="bad">¡Un bug te alcanzó!</b><br>La línea <code>${esc(l.codigo.trim())}</code> volvió al mapa en otro lugar.<br>Vidas: ${"❤️".repeat(Math.max(lives, 0))}`);
+                } else showMessage(`👾 <b class="bad">Un bug te alcanzó</b>, pero aún no tenías líneas.<br>Vidas: ${"❤️".repeat(Math.max(lives, 0))}`);
+                updateUI();
+            }).catch(fallo);
+        }
+
+        function collide() {
+            if (over) return;
+            const t = now();
+            for (const e of enemies) {
+                const same = e.x === player.x && e.y === player.y;
+                const swap = e.x === player.px && e.y === player.py && e.px === player.x && e.py === player.y;
+                if (!same && !swap) continue;
+                if (t < debugUntil) {
+                    extra += 150; pop("+150"); beep(1000, .12, "triangle"); showMessage("🐞 Bug eliminado. <b>+150</b>");
+                } else if (t > hurtUntil) {
+                    hurtUntil = t + 2000; beep(140, .3, "sawtooth");
+                    golpeDeBug();
+                } else continue;
+                e.x = e.px = e.rx = e.sx; e.y = e.py = e.ry = e.sy; e.wake = t + 2000;
+            }
+            updateUI();
+        }
+
+        function moveEnemies() {
+            if (over) return;
+            const t = now(), dbg = t < debugUntil;
+            // distMap se cachea por posición del jugador — no recalcula si no se movió
+            const d = distMap(player.x, player.y);
+            enemies.forEach(e => {
+                if (t < e.wake || t < e.nx) return;
+                e.nx = t + e.iv;
+                const val = p => d[p[1]][p[0]] < 0 ? 999 : d[p[1]][p[0]];
+                const opts = D4.map(([a, b]) => [e.x + a, e.y + b]).filter(p => !isWall(p[0], p[1]));
+                if (!opts.length) return;
+                let pick;
+                if (!dbg && Math.random() < .2) pick = opts[Math.random() * opts.length | 0];
+                else { opts.sort((a, b) => val(a) - val(b)); pick = dbg ? opts[opts.length - 1] : opts[0]; }
+                e.px = e.x; e.py = e.y; e.x = pick[0]; e.y = pick[1];
+            });
+            collide();
+        }
+        setInterval(moveEnemies, 100);
+
+        function draw(t) {
+            ctx.clearRect(0, 0, 608, 608);
+            if (!walls) return;
+            ctx.drawImage(walls, 0, 0);
+            const dbg = t < debugUntil, pulse = .5 + .5 * Math.sin(t / 180);
+            ctx.textAlign = "center"; ctx.textBaseline = "middle";
+
+            for (let y = 0; y < map.length; y++) for (let x = 0; x < map[y].length; x++) {
+                const c = map[y][x], px = x * T, py = y * T;
+                if (c === ".") { ctx.fillStyle = "#FFB400"; ctx.beginPath(); ctx.arc(px + 16, py + 16, 3, 0, Math.PI * 2); ctx.fill(); }
+                else if (c === "D") { ctx.font = "22px Arial"; ctx.fillText("🔧", px + 16, py + 17 + Math.sin(t / 250) * 2); }
+            }
+            items.forEach(it => {
+                const px = it.x * T, py = it.y * T, hot = dbg && it.l.id === siguienteId;
+                ctx.fillStyle = "#5B5BF0"; ctx.beginPath(); ctx.roundRect(px + 2, py + 4, 28, 24, 6); ctx.fill();
+                ctx.strokeStyle = hot ? "#10B981" : "#FFB400"; ctx.lineWidth = 1 + pulse * 2; ctx.stroke();
+                ctx.fillStyle = "#fff"; ctx.font = "bold 12px monospace"; ctx.fillText("</>", px + 16, py + 16);
+            });
+            ctx.font = "bold 11px monospace";
+            items.forEach(it => {
+                const txt = preview(it.l.codigo), w = ctx.measureText(txt).width + 12, hot = dbg && it.l.id === siguienteId;
+                const tx = Math.min(Math.max(it.x * T + 16 - w / 2, 2), 606 - w), ty = it.y * T - 12;
+                ctx.fillStyle = hot ? "#D1FAE5" : "#fff"; ctx.strokeStyle = hot ? "#10B981" : "#5B5BF0"; ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.roundRect(tx, ty - 9, w, 18, 5); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = hot ? "#065F46" : "#1F2540"; ctx.fillText(txt, tx + w / 2, ty);
+            });
+
+            if (!(t < hurtUntil && Math.floor(t / 100) % 2)) { ctx.font = "23px Arial"; ctx.fillText("🧑‍💻", player.rx * T + 16, player.ry * T + 17); }
+            ctx.font = "22px Arial";
+            enemies.forEach(e => { ctx.globalAlpha = t < e.wake ? .45 : 1; ctx.fillText(dbg ? "🧊" : "👾", e.rx * T + 16, e.ry * T + 17); });
+            ctx.globalAlpha = 1;
+
+            popups = popups.filter(p => t - p.t < 900);
+            popups.forEach(p => {
+                ctx.globalAlpha = 1 - (t - p.t) / 900; ctx.fillStyle = "#D97706"; ctx.font = "bold 14px Arial";
+                ctx.fillText(p.s, p.x * T + 16, p.y * T - (t - p.t) / 30);
+            });
+            ctx.globalAlpha = 1;
+            if (dbg) { ctx.fillStyle = "#10C28F"; ctx.fillRect(0, 604, 608 * (debugUntil - t) / 7000, 4); }
+        }
+
+        let wasDebug = false;
+        function frame(t) {
+            if (player) { [player, ...enemies].forEach(o => { o.rx += (o.x - o.rx) * .3; o.ry += (o.y - o.ry) * .3; }); }
+            go();
+            const d = t < debugUntil;
+            if (d !== wasDebug) { wasDebug = d; updateUI(); }
+            draw(t);
+            requestAnimationFrame(frame);
+        }
+
+        function go() {
+            const n = now();
+            if (held && n - lastMove > STEP) { lastMove = n; tryMove(held[0], held[1]); }
+        }
+
+        function showIntro() {
+            over = "intro";
+            $("ovT").textContent = "🎮 Cómo jugar";
+            $("ovD").innerHTML = `<div class="how"><b>Cada nivel es un programa</b> partido en líneas de código escondidas en el laberinto.<br>
+    <b>1.</b> Las líneas se recogen <b>en orden</b>: arriba te dice cuál sigue y el panel muestra el programa que vas armando.<br>
+    <b>2.</b> Cada objeto del mapa muestra un <b>fragmento de código</b>: elige el que coincide con la pista.<br>
+    <b>3.</b> Al recogerla verás qué hace esa línea.<br>
+    <b>4.</b> Tienes <b>3 vidas ❤️</b>. Si un 👾 te alcanza, pierdes una vida y <b>la última línea</b>, que reaparece en otro lugar.<br>
+    <b>5.</b> 🔧 activa el Debug 7 s: los bugs huyen y la línea correcta brilla en verde.<br>
+    <b>6.</b> Explorar una <b>zona nueva</b> del mapa da puntos extra.</div>`;
+            $("ovBack").style.display = "none";
+            $("ovB").textContent = "¡Entendido, empezar! (Enter)";
+            $("overlay").classList.add("show");
+        }
+
+        function overlayBtn() {
+            if (over === "loading" || over === "finishing") return;
+            if (over === "intro") {
+                over = null; $("overlay").classList.remove("show");
+                enemies.forEach((e, i) => e.wake = now() + 1500 + i * 2000);
+            } else if (over === "done") {
+                if (lvl < LV.length - 1) loadLevel(lvl + 1);
+                else { results = []; loadLevel(0, true); }
+            } else loadLevel(lvl);
+        }
+
+        addEventListener("keydown", e => {
+            const k = e.key.toLowerCase();
+            if (KEYS[k]) { e.preventDefault(); held = KEYS[k]; heldKey = k; go(); }
+            else if (k === "enter" && over) { e.preventDefault(); overlayBtn(); }
+            else if (k === "r") loadLevel(lvl);
+            else if (k === "m") muted = !muted;
+        });
+        addEventListener("keyup", e => { if (e.key.toLowerCase() === heldKey) held = null; });
+
+        document.querySelectorAll(".dpad button").forEach(b => {
+            const d = b.dataset.d.split(",").map(Number);
+            b.addEventListener("pointerdown", e => { e.preventDefault(); held = d; heldKey = "pad"; go(); });
+            ["pointerup", "pointerleave", "pointercancel"].forEach(ev => b.addEventListener(ev, () => { if (heldKey === "pad") held = null; }));
+        });
+
+        let ts = null;
+        cv.addEventListener("touchstart", e => { ts = e.touches[0]; }, { passive: true });
+        cv.addEventListener("touchend", e => {
+            if (!ts) return;
+            const t = e.changedTouches[0], dx = t.clientX - ts.clientX, dy = t.clientY - ts.clientY; ts = null;
+            if (Math.max(Math.abs(dx), Math.abs(dy)) < 20) return;
+            Math.abs(dx) > Math.abs(dy) ? tryMove(Math.sign(dx), 0) : tryMove(0, Math.sign(dy));
+        });
+
+        (async () => {
+            if (!LV || LV.length === 0) {
+                showMessage("⚠️ No se encontraron niveles para esta actividad.");
+                return;
+            }
+            const listo = loadLevel(0, true);
+            requestAnimationFrame(frame);
+            await listo;
+            if (over === null) showIntro();
+        })();
+    </script>
+    {% endverbatim %}
+</body>
+
+</html>

@@ -2,4 +2,5 @@ from django.apps import AppConfig
 
 
 class PacmanConfig(AppConfig):
-    name = 'pacman'
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'minijuegos.pacman'

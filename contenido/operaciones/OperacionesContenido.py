@@ -140,19 +140,22 @@ class OperacionesContenido:
 
     def _serializar_actividad(self, actividad, progresos):
         tipo = (actividad.tipo or '').strip().lower()
-        jugable = tipo in ('trivia', 'memorama')
+        jugable = tipo in ('trivia', 'memorama', 'match_juego', 'match', 'pacman')
         completada = self.actividad_completada(actividad, progresos)
         progreso = progresos.get(actividad.id)
 
         if tipo == 'trivia':
             etiqueta = 'Trivia'
-            url_name = 'trivia_detalle'
+            url_name = 'trivia:trivia_detalle'
         elif tipo == 'memorama':
             etiqueta = 'Memorama'
             url_name = 'memorama_detalle'
         elif tipo in ('match_juego', 'match'):
             etiqueta = 'Match'
-            url_name = None
+            url_name = 'match:match_detalle'
+        elif tipo == 'pacman':
+            etiqueta = 'Pacman'
+            url_name = 'pacman:jugar'
         else:
             etiqueta = actividad.tipo or 'Actividad'
             url_name = None
