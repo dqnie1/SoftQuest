@@ -4,14 +4,6 @@ import random
 class OperacionesPacman:
     VIDAS = 3
     PUNTOS_LINEA_DEFECTO = 100
-    PUNTOS_ZONA = 25
-    PENALIZACION_BUG = 50
-    BONUS_BASE = 300
-    BONUS_POR_BUG = 50
-    MAX_PUNTOS_EXTRA = 3000     # tope de lo que reporta el cliente (puntitos, debug, bugs eliminados)
-
-    ZONAS_COLUMNAS = 3
-    ZONAS_FILAS = 3
 
     # Leyenda: # pared  . camino  P inicio jugador  D debugger (spawn enemigos)
     # Todos los mapas deben tener exactamente una 'P' y al menos una 'D'.
@@ -61,47 +53,25 @@ class OperacionesPacman:
             "#.................#",
             "###################",
         ],
-        # --- Mapa 2: Espiral ---
-        [
-            "###################",
-            "#.................#",
-            "#.###############.#",
-            "#.#...........  #.#",
-            "#.#.#########.#.#.#",
-            "#.#.#.......#.#.#.#",
-            "#.#.#.#####.#.#.#.#",
-            "#.#.#.#.D.#.#.#.#.#",
-            "#.#.#.#####.#.#.#.#",
-            "#.#.#.......#.#.#.#",
-            "#.#.#########.#.#.#",
-            "#.#...........#.#.#",
-            "#.#############.#.#",
-            "#...............#.#",
-            "#################.#",
-            "#.................#",
-            "#.###############.#",
-            "#P................#",
-            "###################",
-        ],
         # --- Mapa 3: Cuadricula abierta ---
         [
             "###################",
             "#P..#.....#.....#.#",
             "#.#.#.###.#.###.#.#",
             "#.#...#.....#...#.#",
-            "#.#####.###.#####.#",
+            "#.#####.###.##,##.#",
             "#.......#.#.......#",
-            "#.#####.#.#.#####.#",
+            "#.#.###.#.#.#####.#",
             "#.#...#.#.#.#...#.#",
             "#.#.#.#.#.#.#.#.#.#",
             "#...#.....D...#...#",
-            "#.#.#########.#.#.#",
+            "#.#.####.####.#.#.#",
             "#.#.#.........#.#.#",
             "#.#.#.#######.#.#.#",
             "#.#...#.....#...#.#",
-            "#.#####.###.#####.#",
+            "#.#.###.###.#####.#",
             "#.......#.#.......#",
-            "#.#####.#.#.#####.#",
+            "#.#.###.#.#.#####.#",
             "#.................#",
             "###################",
         ],
@@ -194,7 +164,7 @@ class OperacionesPacman:
         juego["nivel"] = {
             "id": nivel.id, "titulo": nivel.titulo, "salida": nivel.salida, "lineas": lineas,
             "recogidas": [], "vidas": cls.VIDAS, "bugs": 0, "puntaje": base, "base": base,
-            "zonas": [], "finalizado": False, "final": None,
+            "finalizado": False, "final": None,
         }
         return juego["nivel"]
 
@@ -237,47 +207,23 @@ class OperacionesPacman:
         if not estado["recogidas"]:
             return None
         linea_id = estado["recogidas"].pop()
-        estado["puntaje"] = max(0, estado["puntaje"] - cls.PENALIZACION_BUG)
+        linea = next(l for l in estado["lineas"] if l["id"] == linea_id)
+        estado["puntaje"] -= linea["puntos"]
         return linea_id
-
-    # ------------------------------------------------------------------
-    # Puntos por zona
-    # ------------------------------------------------------------------
-    @classmethod
-    def zona_de(cls, x, y, mapa):
-        filas, cols = len(mapa), len(mapa[0])
-        return (y * cls.ZONAS_FILAS // filas) * cls.ZONAS_COLUMNAS + (x * cls.ZONAS_COLUMNAS // cols)
-
-    @classmethod
-    def suma_puntos(cls, estado, x, y, mapa):
-        """Puntos por pisar una zona nueva. Devuelve los puntos otorgados (0 si no aplica)."""
-        if not (0 <= y < len(mapa) and 0 <= x < len(mapa[0])) or mapa[y][x] == "#":
-            return 0
-        zona = cls.zona_de(x, y, mapa)
-        if zona in estado["zonas"]:
-            return 0
-        estado["zonas"].append(zona)
-        estado["puntaje"] += cls.PUNTOS_ZONA
-        return cls.PUNTOS_ZONA
 
     # ------------------------------------------------------------------
     # Fin de nivel
     # ------------------------------------------------------------------
     @classmethod
-    def calcular_resumen_nivel(cls, estado, puntos_extra=0):
+    def calcular_resumen_nivel(cls, estado):
         """Funcion pura: no modifica el estado, la vista lo confirma despues de guardar en BD."""
-        extra = max(0, min(int(puntos_extra), cls.MAX_PUNTOS_EXTRA))
-        bonus = max(0, cls.BONUS_BASE - estado["bugs"] * cls.BONUS_POR_BUG)
-        total = estado["puntaje"] + extra + bonus
         return {
             "titulo": estado["titulo"],
             "n": len(estado["lineas"]),
             "vidas": estado["vidas"],
             "bugs": estado["bugs"],
-            "bonus": bonus,
-            "puntos_nivel": total - estado["base"],
-            "puntaje_total": total,
+            "puntos_nivel": estado["puntaje"] - estado["base"],
+            "puntaje_total": estado["puntaje"],
             "salida": estado["salida"],
             "codigo": [l["codigo"] for l in estado["lineas"]],
         }
-
