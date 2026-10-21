@@ -13,6 +13,7 @@ urlpatterns = [
     path('', include('minijuegos.trivia.urls')),
     path('', include('minijuegos.match.urls')), #url de minijuego
     path('pacman/', include('minijuegos.pacman.urls')), #url de minijuego
+    path('snake/', include('minijuegos.snake.urls')), #url de minijuego snake
 ]
 
 # Servir archivos estaticos durante el desarrollo.
