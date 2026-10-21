@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'minijuegos.trivia',
     'minijuegos.match',
     'minijuegos.pacman',
+    'minijuegos.nave',
     'minijuegos.snake',
     'contenido', # exploracion de mundos y temarios
     'login',
@@ -198,3 +199,6 @@ MAILERS = {
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'mapa_mundos'
 LOGOUT_REDIRECT_URL = 'login'
+
+# Optimización de sesiones: caché en memoria + base de datos para eliminar latencia de red
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
