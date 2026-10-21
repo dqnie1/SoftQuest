@@ -85,12 +85,10 @@
         const CFG = {
             csrf: "{{ csrf_token }}",
             urlTemario: "{{ url_temario|escapejs }}",
-            zonas: { columnas: {{ zonas_columnas }}, filas: {{ zonas_filas }} },
             urls: {
                 iniciar: "{% url 'pacman:iniciar' actividad.pk %}",
                 recoger: "{% url 'pacman:recoger' actividad.pk %}",
                 bug: "{% url 'pacman:bug' actividad.pk %}",
-                zona: "{% url 'pacman:zona' actividad.pk %}",
                 finalizar: "{% url 'pacman:finalizar' actividad.pk %}"
             }
         };
@@ -107,13 +105,12 @@
         const LV = JSON.parse($("pacman-niveles").textContent);   // lista de PACMAN_LINEAs ya revuelta por el servidor
         const D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
         const KEYS = { arrowup: [0, -1], w: [0, -1], arrowdown: [0, 1], s: [0, 1], arrowleft: [-1, 0], a: [-1, 0], arrowright: [1, 0], d: [1, 0] };
-        const zoneOf = (x, y) => Math.floor(y * CFG.zonas.filas / MAPA.length) * CFG.zonas.columnas + Math.floor(x * CFG.zonas.columnas / MAPA[0].length);
 
         let lvl = 0, map, walls, player, enemies = [], items = [], got = [], lines = [], total = 0;
-        let pistaSig = "", siguienteId = null, zonas = new Set();
-        let results = [], lives = LIVES, srvScore = 0, extra = 0, debugUntil = 0, hurtUntil = 0, over = null, popups = [];
+        let pistaSig = "", siguienteId = null;
+        let results = [], lives = LIVES, srvScore = 0, debugUntil = 0, hurtUntil = 0, over = null, popups = [];
         let muted = false, held = null, heldKey = null, lastMove = 0;
-        const score = () => srvScore + extra;   // puntaje del servidor + puntitos/debug/bugs eliminados (local)
+        const score = () => srvScore;
 
         const preview = c => { c = c.trim(); return c.length > 22 ? c.slice(0, 21) + "…" : c; };
         const ent = (x, y) => ({ x, y, sx: x, sy: y, px: x, py: y, rx: x, ry: y, wake: 0, nx: 0, iv: 560 });
@@ -122,10 +119,8 @@
 
         /* ---------- Comunicación con el servidor ----------
            colaJuego: acciones críticas en orden (iniciar, recoger, bug, finalizar)
-           colaZona:  puntos de zona — no bloquean la cola principal
         ---------------------------------------------------*/
         let colaJuego = Promise.resolve();
-        let colaZona  = Promise.resolve();
         function _fetch(nombre, datos) {
             return fetch(CFG.urls[nombre], {
                 method: "POST",
@@ -138,12 +133,6 @@
             });
         }
         function api(nombre, datos) {
-            // zona usa su propia cola para no bloquear acciones del juego
-            if (nombre === "zona") {
-                const p = colaZona.then(() => _fetch(nombre, datos));
-                colaZona = p.catch(() => {});
-                return p;
-            }
             const p = colaJuego.then(() => _fetch(nombre, datos));
             colaJuego = p.catch(() => {});
             return p;
@@ -222,12 +211,10 @@
             if (!LV || !LV[i]) return;
             const L = LV[i];
             map = MAPA.map(r => r.split(""));
-            items = []; got = []; popups = []; zonas = new Set();
-            lives = LIVES; debugUntil = 0; hurtUntil = 0; extra = 0; pistaSig = ""; siguienteId = null;
+            items = []; got = []; popups = [];
+            lives = LIVES; debugUntil = 0; hurtUntil = 0; pistaSig = ""; siguienteId = null;
             lines = L.lineas || []; total = L.total_lineas || lines.length;
             map.forEach((r, y) => r.forEach((c, x) => { if (c === "P") { player = ent(x, y); r[x] = " "; } }));
-            zonas.add(zoneOf(player.x, player.y));
-
             const spawns = [];
             map.forEach((r, y) => r.forEach((c, x) => { if (c === "D") spawns.push({ x, y }); }));
             const defSpawns = spawns.length > 0 ? spawns : [{ x: 9, y: 9 }];
@@ -295,21 +282,10 @@
 
         function processCell() {
             const c = map[player.y][player.x];
-            if (c === ".") { map[player.y][player.x] = " "; extra += 5; beep(660, .04); }
+            if (c === ".") { map[player.y][player.x] = " "; beep(660, .04); }
             if (c === "D") {
-                map[player.y][player.x] = " "; debugUntil = now() + 7000; extra += 50; beep(880, .15, "triangle");
+                map[player.y][player.x] = " "; debugUntil = now() + 7000; beep(880, .15, "triangle");
                 showMessage(`🔧 <b class="good">DEBUG MODE</b> (7 s)<br>Los bugs huyen, puedes eliminarlos y la línea correcta brilla en verde.`);
-            }
-
-            /* Zona nueva explorada -> sumarPuntos(zona) */
-            const z = zoneOf(player.x, player.y);
-            if (!zonas.has(z)) {
-                zonas.add(z);
-                api("zona", { x: player.x, y: player.y }).then(r => {
-                    srvScore = r.puntaje;
-                    if (r.puntos) { pop("+" + r.puntos + " zona"); beep(520, .1, "triangle"); }
-                    updateUI();
-                }).catch(fallo);
             }
 
             /* Línea del reto -> validarOrdenFragmento */
@@ -349,9 +325,9 @@
         /* Último fragmento -> calcularResumenNivel + guardarProgresoActividad + desbloquearSiguienteActividad */
         function completeLevel() {
             over = "finishing";
-            api("finalizar", { puntos_extra: extra }).then(r => {
+            api("finalizar").then(r => {
                 const R = r.resumen, last = r.es_ultimo;
-                srvScore = R.puntaje_total; extra = 0;
+                srvScore = R.puntaje_total;
                 results[lvl] = { t: R.titulo, n: R.n, bugs: R.bugs, lives: R.vidas, pts: R.puntos_nivel };
                 over = "done"; beep(988, .4, "triangle");
                 const unlock = r.desbloqueada ? `<br><span class="good">🔓 Se desbloqueó la siguiente actividad</span>` : "";
@@ -359,7 +335,7 @@
                 $("ovD").innerHTML = last
                     ? summaryHTML() + unlock
                     : `<pre class="pre">${R.codigo.map(c => esc(c)).join("\n")}</pre>
-         Salida: <b class="good">${esc(R.salida)}</b><br><br>Bonus por pocos bugs: <b>+${R.bonus}</b> · Puntos: <b>${score()}</b>`;
+         Salida: <b class="good">${esc(R.salida)}</b><br><br>Puntos: <b>${score()}</b>`;
                 $("ovBack").style.display = last ? "" : "none";
                 $("ovB").textContent = last ? "Jugar de nuevo (Enter)" : "Siguiente nivel ▶ (Enter)";
                 $("overlay").classList.add("show");
@@ -401,7 +377,7 @@
                 const swap = e.x === player.px && e.y === player.py && e.px === player.x && e.py === player.y;
                 if (!same && !swap) continue;
                 if (t < debugUntil) {
-                    extra += 150; pop("+150"); beep(1000, .12, "triangle"); showMessage("🐞 Bug eliminado. <b>+150</b>");
+                    beep(1000, .12, "triangle"); showMessage("🐞 Bug eliminado.");
                 } else if (t > hurtUntil) {
                     hurtUntil = t + 2000; beep(140, .3, "sawtooth");
                     golpeDeBug();
@@ -496,7 +472,7 @@
     <b>3.</b> Al recogerla verás qué hace esa línea.<br>
     <b>4.</b> Tienes <b>3 vidas ❤️</b>. Si un 👾 te alcanza, pierdes una vida y <b>la última línea</b>, que reaparece en otro lugar.<br>
     <b>5.</b> 🔧 activa el Debug 7 s: los bugs huyen y la línea correcta brilla en verde.<br>
-    <b>6.</b> Explorar una <b>zona nueva</b> del mapa da puntos extra.</div>`;
+    <b>6.</b> Los puntos se obtienen únicamente al recoger las <b>partes del reto</b>.</div>`;
             $("ovBack").style.display = "none";
             $("ovB").textContent = "¡Entendido, empezar! (Enter)";
             $("overlay").classList.add("show");

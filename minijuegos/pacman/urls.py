@@ -10,6 +10,5 @@ urlpatterns = [
     path("<int:actividad_id>/iniciar/", views.iniciar_nivel, name="iniciar"),       # POST
     path("<int:actividad_id>/recoger/", views.recoger_linea, name="recoger"),       # POST
     path("<int:actividad_id>/bug/", views.bug_alcanzo, name="bug"),                 # POST
-    path("<int:actividad_id>/zona/", views.zona_nueva, name="zona"),                # POST
     path("<int:actividad_id>/finalizar/", views.finalizar_nivel, name="finalizar"), # POST
 ]
