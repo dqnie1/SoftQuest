@@ -84,8 +84,6 @@ def vista_pacman(request, actividad_id):
         "actividad": actividad,
         "niveles": [Ops.preparar_nivel(n, mapa) for n in niveles],
         "mapa": mapa,
-        "zonas_columnas": Ops.ZONAS_COLUMNAS,
-        "zonas_filas": Ops.ZONAS_FILAS,
         "url_temario": _url_temario(actividad),
     })
 
@@ -181,28 +179,6 @@ def bug_alcanzo(request, actividad_id):
 
 
 # ----------------------------------------------------------------------
-# POST /pacman/<actividad_id>/zona/  — puntos por zona nueva explorada
-# ----------------------------------------------------------------------
-@login_required
-@require_POST
-def zona_nueva(request, actividad_id):
-    juego, estado = _estado_activo(request, actividad_id)
-    if estado is None or estado["vidas"] <= 0:
-        return _error("sin_estado", 409)
-
-    datos = _datos(request)
-    try:
-        x, y = int(datos.get("x")), int(datos.get("y"))
-    except (TypeError, ValueError):
-        return _error("datos_invalidos", 400)
-
-    mapa = juego.get("mapa", Ops.MAPAS[0])
-    puntos = Ops.suma_puntos(estado, x, y, mapa)
-    _guardar_juego(request, actividad_id, juego)
-    return JsonResponse({"puntos": puntos, "puntaje": estado["puntaje"]})
-
-
-# ----------------------------------------------------------------------
 # POST /pacman/<actividad_id>/finalizar/  — ultimo fragmento, guardar progreso
 # ----------------------------------------------------------------------
 @login_required
@@ -218,12 +194,7 @@ def finalizar_nivel(request, actividad_id):
     if Ops.siguiente(estado) is not None:
         return _error("faltan_lineas", 409)
 
-    try:
-        extra = int(_datos(request).get("puntos_extra", 0))
-    except (TypeError, ValueError):
-        extra = 0
-
-    resumen = Ops.calcular_resumen_nivel(estado, extra)
+    resumen = Ops.calcular_resumen_nivel(estado)
     es_ultimo = juego["niveles"][-1] == estado["id"]
     actividad = get_object_or_404(Actividad, pk=actividad_id)
 

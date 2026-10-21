@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ actividad.titulo }} - SoftQuest</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'snakeStyle.css' %}">
+</head>
+<body>
+
+    <!-- Header superior común -->
+    <header class="top">
+        <a href="{{ url_temario }}" class="brand" title="Volver al temario">
+            <svg viewBox="0 0 24 24" fill="#5B5BF0">
+                <path d="M13 2 4 14h6l-1 8 9-12h-6z" />
+            </svg>
+            <span>SoftQuest</span>
+        </a>
+        <span class="plabel">PROGRESO RNF</span>
+        <div class="ptrack">
+            <div class="pfill" id="pbar"></div>
+        </div>
+        <span class="ppill" id="ppill">0/0</span>
+
+        <div class="top-actions">
+            <a href="{{ url_temario }}" class="btn-header">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                Volver al temario
+            </a>
+        </div>
+    </header>
+
+    <!-- Contenedor principal del minijuego -->
+    <main class="game-container">
+        <!-- Columna izquierda: Tablero y controles -->
+        <div class="board-wrapper">
+            <div class="mission-banner" id="missionBanner">
+                <div>
+                    <span id="levelTitle">Nivel 1</span> &bull; <span id="levelTopic">Requerimientos de Software</span>
+                </div>
+                <span class="badge" id="levelGoalBadge">Recolecta los RNF</span>
+            </div>
+
+            <div class="board-card">
+                <canvas id="snakeCanvas" width="676" height="676"></canvas>
+                <div class="start-prompt" id="startPrompt">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                    Presiona una flecha o WASD para comenzar
+                </div>
+            </div>
+
+            <!-- Controles virtuales D-Pad para táctil o accesibilidad -->
+            <div class="dpad" id="dpad">
+                <button type="button" data-d="0,-1" style="grid-area: u;" aria-label="Arriba">▲</button>
+                <button type="button" data-d="-1,0" style="grid-area: l;" aria-label="Izquierda">◀</button>
+                <button type="button" data-d="1,0" style="grid-area: r;" aria-label="Derecha">▶</button>
+                <button type="button" data-d="0,1" style="grid-area: d;" aria-label="Abajo">▼</button>
+            </div>
+        </div>
+
+        <!-- Columna derecha: Panel de control, estadísticas y lección -->
+        <div class="panel">
+            <div class="panel-header">
+                <h1>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5B5BF0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2a10 10 0 0 1 10 10c0 5.523-4.477 10-10 10S2 17.523 2 12"/>
+                        <path d="M12 6v6l4 2"/>
+                    </svg>
+                    SNAKE RNF
+                </h1>
+                <div class="subtitle">Identifica y recolecta Requerimientos No Funcionales</div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-box gold">
+                    <div class="stat-label">Puntaje XP</div>
+                    <div class="stat-value" id="scoreDisplay">0</div>
+                </div>
+                <div class="stat-box highlight">
+                    <div class="stat-label">Objetivos RNF</div>
+                    <div class="stat-value" id="rnfDisplay">0/0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Tiempo</div>
+                    <div class="stat-value" id="timerDisplay">00:00</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Longitud</div>
+                    <div class="stat-value" id="lengthDisplay">3</div>
+                </div>
+            </div>
+
+            <div class="legend-card">
+                <div class="legend-title">Guía de Elementos</div>
+                <div class="legend-item">
+                    <div class="legend-icon target">&#10003;</div>
+                    <div>
+                        <b>Requisito No Funcional (RNF)</b>
+                        <div style="font-size: 11px; color: #6B7494;">Objetivo. Come para ganar puntos y crecer.</div>
+                    </div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-icon obstacle">&#10005;</div>
+                    <div>
+                        <b>Requisito Funcional (RF)</b>
+                        <div style="font-size: 11px; color: #6B7494;">Obstáculo. ¡Evítalo o terminará la partida!</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls-hint">
+                Controles: <b>WASD</b> o <b>Flechas</b> del teclado.<br>
+                <b>P</b> para pausar &bull; <b>R</b> para reiniciar nivel.
+            </div>
+
+            <button type="button" class="btn btn-ghost" id="btnRestart">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                </svg>
+                Reiniciar nivel
+            </button>
+        </div>
+    </main>
+
+    <!-- ================================================================= -->
+    <!-- MODAL 1: Instrucciones Iniciales                                  -->
+    <!-- ================================================================= -->
+    <div class="modal-overlay" id="modalInstructions">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-icon indigo">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                </div>
+                <div class="modal-title-group">
+                    <span class="modal-badge info">Instrucciones</span>
+                    <h2 id="modalInstTitle">Misión de Requerimientos</h2>
+                </div>
+            </div>
+            <div class="modal-body">
+                <p id="modalInstText">
+                    Bienvenido al desafío Snake. Tu misión es controlar a la serpiente para recolectar exclusivamente
+                    los <b>Requerimientos No Funcionales (RNF)</b> que definen los atributos de calidad, rendimiento y seguridad del sistema.
+                </p>
+                <div class="pedagogical-box">
+                    <h3>&#128161; Reglas del juego</h3>
+                    <p>
+                        &bull; <b>Come los RNF</b> (marcados en verde) para sumar experiencia y alargar tu serpiente.<br>
+                        &bull; <b>Esquiva los Requerimientos Funcionales (RF)</b> (marcados en rojo): son funciones que realiza el software, no restricciones de calidad.<br>
+                        &bull; <b>No choques</b> con las paredes del tablero ni con tu propio cuerpo.
+                    </p>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn" id="btnStartGame">¡Comenzar!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MODAL 2: Información Educativa RNF (Objetivo recolectado)          -->
+    <!-- ================================================================= -->
+    <div class="modal-overlay" id="modalRnf">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-icon success">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                </div>
+                <div class="modal-title-group">
+                    <span class="modal-badge target" id="rnfModalCategory">Requisito No Funcional</span>
+                    <h2 id="rnfModalIdentificador">RNF-01</h2>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="item-quote target" id="rnfModalTexto">
+                    "Texto del requisito..."
+                </div>
+                <div class="pedagogical-box">
+                    <h3>¿Por qué es un Requerimiento No Funcional?</h3>
+                    <p id="rnfModalExplicacion">Explicación pedagógica detallada.</p>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-success" id="btnContinueRnf">Continuar partida</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MODAL 3: Advertencia RF (Obstáculo tocado)                         -->
+    <!-- ================================================================= -->
+    <div class="modal-overlay" id="modalRf">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-icon danger">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                </div>
+                <div class="modal-title-group">
+                    <span class="modal-badge obstacle" id="rfModalCategory">Requisito Funcional Detectado</span>
+                    <h2 id="rfModalIdentificador">RF-01</h2>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="item-quote obstacle" id="rfModalTexto">
+                    "Texto del requisito funcional..."
+                </div>
+                <div class="pedagogical-box warning-box">
+                    <h3>¿Por qué es un RF y no un RNF?</h3>
+                    <p id="rfModalExplicacion">Explicación del requisito funcional.</p>
+                    <div style="margin-top: 10px;" id="rfModalContrasteCont">
+                        <table class="contrast-table">
+                            <thead>
+                                <tr>
+                                    <th>Requerimiento Funcional (RF)</th>
+                                    <th>Requerimiento No Funcional (RNF)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Define <b>qué hace</b> el sistema (servicios, acciones, funciones del usuario).</td>
+                                    <td>Define <b>cómo se comporta</b> (restricciones de rendimiento, seguridad, usabilidad).</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-danger" id="btnUnderstandRf">Entendido</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MODAL 4: Resumen de Partida (Victoria / Derrota)                   -->
+    <!-- ================================================================= -->
+    <div class="modal-overlay" id="modalResult">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-icon" id="resultModalIcon">
+                    <!-- Icono dinamico (trofeo o alerta) -->
+                </div>
+                <div class="modal-title-group">
+                    <span class="modal-badge" id="resultModalBadge">Fin de partida</span>
+                    <h2 id="resultModalTitle">Resultado</h2>
+                </div>
+            </div>
+            <div class="modal-body">
+                <p id="resultModalDesc">Resumen del resultado.</p>
+
+                <div class="stats-grid" style="margin-top: 8px;">
+                    <div class="stat-box gold">
+                        <div class="stat-label">Puntaje XP</div>
+                        <div class="stat-value" id="resultScore">0</div>
+                    </div>
+                    <div class="stat-box highlight">
+                        <div class="stat-label">RNF Obtenidos</div>
+                        <div class="stat-value" id="resultRnf">0/0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Tiempo Total</div>
+                        <div class="stat-value" id="resultTime">00:00</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Mejor Puntaje</div>
+                        <div class="stat-value" id="resultBestScore">0</div>
+                    </div>
+                </div>
+
+                <div class="pedagogical-box" id="resultLessonBox">
+                    <h3 id="resultLessonTitle">Lección Clave</h3>
+                    <p id="resultLessonText">Recuerda: Los RNF son criterios de calidad que aseguran que el sistema sea confiable, rápido y seguro.</p>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-ghost" id="btnExitToMenu">Volver al temario</button>
+                <button type="button" class="btn" id="btnRetryGame">Reintentar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuración y datos entregados por Django -->
+    {{ niveles|json_script:"snake-niveles" }}
+    <script>
+        const CFG = {
+            csrf: "{{ csrf_token }}",
+            urlTemario: "{{ url_temario|escapejs }}",
+            urlFinalizar: "{% url 'snake:finalizar' actividad.pk %}",
+            puntajePrevio: {{ puntaje_previo|default:0 }}
+        };
+    </script>
+
+    <!-- Lógica del juego en JavaScript -->
+    <script>
+    (function() {
+        "use strict";
+
+        // Elementos DOM
+        const canvas = document.getElementById("snakeCanvas");
+        const ctx = canvas.getContext("2d");
+        const startPrompt = document.getElementById("startPrompt");
+        const scoreDisplay = document.getElementById("scoreDisplay");
+        const rnfDisplay = document.getElementById("rnfDisplay");
+        const timerDisplay = document.getElementById("timerDisplay");
+        const lengthDisplay = document.getElementById("lengthDisplay");
+        const pbar = document.getElementById("pbar");
+        const ppill = document.getElementById("ppill");
+        const missionBanner = document.getElementById("missionBanner");
+        const levelTitle = document.getElementById("levelTitle");
+        const levelTopic = document.getElementById("levelTopic");
+
+        // Modales
+        const modalInstructions = document.getElementById("modalInstructions");
+        const modalRnf = document.getElementById("modalRnf");
+        const modalRf = document.getElementById("modalRf");
+        const modalResult = document.getElementById("modalResult");
+
+        // Botones
+        const btnStartGame = document.getElementById("btnStartGame");
+        const btnContinueRnf = document.getElementById("btnContinueRnf");
+        const btnUnderstandRf = document.getElementById("btnUnderstandRf");
+        const btnRestart = document.getElementById("btnRestart");
+        const btnRetryGame = document.getElementById("btnRetryGame");
+        const btnExitToMenu = document.getElementById("btnExitToMenu");
+
+        // Carga de niveles desde json_script
+        const scriptNiveles = document.getElementById("snake-niveles");
+        const niveles = scriptNiveles ? JSON.parse(scriptNiveles.textContent || "[]") : [];
+
+        if (!niveles || niveles.length === 0) {
+            console.error("No se encontraron niveles para Snake.");
+            return;
+        }
+
+        const nivelActual = niveles[0]; // Nivel activo
+
+        // Estados del juego
+        const ESTADO = {
+            ESPERANDO_INICIO: "ESPERANDO_INICIO",
+            EN_CURSO: "EN_CURSO",
+            MOSTRANDO_INFO: "MOSTRANDO_INFO",
+            GANADA: "GANADA",
+            PERDIDA: "PERDIDA"
+        };
+
+        const MOTIVO_FIN = {
+            RECOLECTO_TODOS: "RECOLECTO_TODOS_LOS_OBJETIVOS",
+            TOCO_OBSTACULO: "TOCO_OBSTACULO",
+            CHOQUE_MURO: "CHOQUE_MURO",
+            CHOQUE_CUERPO: "CHOQUE_CUERPO"
+        };
+
+        // Paleta y estilo
+        const PALETA = {
+            indigo: "#5B5BF0",
+            indigoDark: "#4747D6",
+            indigoLight: "#EEF2FF",
+            targetGreen: "#10C28F",
+            targetGreenDark: "#0B8E67",
+            obstacleRed: "#EF4444",
+            obstacleRedDark: "#DC2626",
+            gridLine: "#EEF2F7",
+            boardBg: "#FAFBFD",
+            snakeHead: "#5B5BF0",
+            snakeBody: "#7575F4"
+        };
+
+        // =============================================================
+        // Clase PartidaSnake
+        // =============================================================
+        class PartidaSnake {
+            constructor(nivel) {
+                this.nivel = nivel;
+                this.filas = nivel.filas || 26;
+                this.columnas = nivel.columnas || 26;
+                this.velocidadMs = nivel.velocidad_ms || 170;
+                this.cellSize = Math.floor(canvas.width / this.columnas);
+                canvas.width = this.columnas * this.cellSize;
+                canvas.height = this.filas * this.cellSize;
+
+                this.reset();
+            }
+
+            reset() {
+                this.estado = ESTADO.ESPERANDO_INICIO;
+                this.motivoFin = null;
+                this.segundos = 0;
+                this.timerInterval = null;
+                this.gameLoopInterval = null;
+
+                // Serpiente inicial en el centro mirando a la derecha
+                const startX = Math.floor(this.columnas / 2);
+                const startY = Math.floor(this.filas / 2);
+                this.snake = [
+                    { x: startX, y: startY },
+                    { x: startX - 1, y: startY },
+                    { x: startX - 2, y: startY }
+                ];
+
+                this.dir = { x: 1, y: 0 };
+                this.nextDir = { x: 1, y: 0 };
+
+                // Clonar items del nivel
+                this.items = (this.nivel.items || []).map(item => ({ ...item }));
+                this.totalObjetivos = this.items.filter(i => i.es_objetivo).length;
+                this.objetivosRecolectados = 0;
+                this.score = 0;
+
+                this.activeItemModal = null; // Item que causó el modal actual
+            }
+
+            iniciarCronometro() {
+                if (this.timerInterval) clearInterval(this.timerInterval);
+                this.timerInterval = setInterval(() => {
+                    if (this.estado === ESTADO.EN_CURSO) {
+                        this.segundos++;
+                        this.actualizarUI();
+                    }
+                }, 1000);
+            }
+
+            detenerCronometro() {
+                if (this.timerInterval) {
+                    clearInterval(this.timerInterval);
+                    this.timerInterval = null;
+                }
+            }
+
+            iniciarLoop() {
+                if (this.gameLoopInterval) clearInterval(this.gameLoopInterval);
+                this.gameLoopInterval = setInterval(() => {
+                    if (this.estado === ESTADO.EN_CURSO) {
+                        this.tick();
+                    }
+                }, this.velocidadMs);
+            }
+
+            detenerLoop() {
+                if (this.gameLoopInterval) {
+                    clearInterval(this.gameLoopInterval);
+                    this.gameLoopInterval = null;
+                }
+            }
+
+            cambiarDireccion(nuevaDir) {
+                // Prevenir giro de 180 grados
+                if (nuevaDir.x !== -this.dir.x || nuevaDir.y !== -this.dir.y) {
+                    this.nextDir = nuevaDir;
+                }
+
+                if (this.estado === ESTADO.ESPERANDO_INICIO) {
+                    this.estado = ESTADO.EN_CURSO;
+                    startPrompt.style.display = "none";
+                    this.iniciarCronometro();
+                    this.iniciarLoop();
+                }
+            }
+
+            tick() {
+                this.dir = { ...this.nextDir };
+                const cabeza = this.snake[0];
+                const nuevaCabeza = {
+                    x: cabeza.x + this.dir.x,
+                    y: cabeza.y + this.dir.y
+                };
+
+                // RN-11: Choque contra limite de pantalla
+                if (
+                    nuevaCabeza.x < 0 ||
+                    nuevaCabeza.x >= this.columnas ||
+                    nuevaCabeza.y < 0 ||
+                    nuevaCabeza.y >= this.filas
+                ) {
+                    this.finalizar(MOTIVO_FIN.CHOQUE_MURO);
+                    return;
+                }
+
+                // Choque contra propio cuerpo
+                for (let i = 0; i < this.snake.length; i++) {
+                    if (this.snake[i].x === nuevaCabeza.x && this.snake[i].y === nuevaCabeza.y) {
+                        this.finalizar(MOTIVO_FIN.CHOQUE_CUERPO);
+                        return;
+                    }
+                }
+
+                // Mover serpiente
+                this.snake.unshift(nuevaCabeza);
+
+                // Comprobar si tocó un ítem
+                const itemIndex = this.items.findIndex(
+                    it => it.x === nuevaCabeza.x && it.y === nuevaCabeza.y
+                );
+
+                if (itemIndex !== -1) {
+                    const itemTocado = this.items[itemIndex];
+                    this.activeItemModal = itemTocado;
+
+                    if (itemTocado.es_objetivo) {
+                        // RN-13: La serpiente crece al recoger un RNF (no hacemos snake.pop())
+                        // Eliminar el ítem recogido del tablero
+                        this.items.splice(itemIndex, 1);
+                        this.objetivosRecolectados++;
+
+                        // RN-18: Actualizar puntuación parcial
+                        this.score = this.totalObjetivos > 0
+                            ? Math.round((this.objetivosRecolectados / this.totalObjetivos) * 100)
+                            : 100;
+
+                        this.actualizarUI();
+
+                        // Pausar y mostrar modal pedagógico RNF (RN-17)
+                        this.estado = ESTADO.MOSTRANDO_INFO;
+                        this.mostrarModalRnf(itemTocado);
+                    } else {
+                        // RN-12: Cuando el jugador agarra un requerimiento funcional el juego termina
+                        // Pausar y mostrar modal pedagógico RF (RN-16)
+                        this.estado = ESTADO.MOSTRANDO_INFO;
+                        this.mostrarModalRf(itemTocado);
+                    }
+                } else {
+                    // No comió: remover cola para mantener longitud
+                    this.snake.pop();
+                }
+
+                this.render();
+                this.actualizarUI();
+            }
+
+            cerrarInformacion() {
+                if (this.estado !== ESTADO.MOSTRANDO_INFO) return;
+
+                if (this.activeItemModal && !this.activeItemModal.es_objetivo) {
+                    // Si tocó un obstáculo RF, al cerrar la advertencia termina la partida como PERDIDA
+                    this.finalizar(MOTIVO_FIN.TOCO_OBSTACULO);
+                    return;
+                }
+
+                // Si era un RNF objetivo
+                if (this.objetivosRecolectados >= this.totalObjetivos) {
+                    // RN-14: Recogió todos los RNF -> GANADA
+                    this.finalizar(MOTIVO_FIN.RECOLECTO_TODOS);
+                } else {
+                    // Reanudar juego
+                    this.estado = ESTADO.EN_CURSO;
+                    this.render();
+                }
+            }
+
+            finalizar(motivo) {
+                this.detenerLoop();
+                this.detenerCronometro();
+                this.motivoFin = motivo;
+                this.estado = (motivo === MOTIVO_FIN.RECOLECTO_TODOS) ? ESTADO.GANADA : ESTADO.PERDIDA;
+
+                this.render();
+                this.actualizarUI();
+
+                // Notificar al servidor Django para registrar intento y puntaje (RN-18)
+                this.enviarResultadoServidor(motivo);
+            }
+
+            enviarResultadoServidor(motivo) {
+                const payload = {
+                    nivel_id: this.nivel.id,
+                    objetivos_recolectados: this.objetivosRecolectados,
+                    motivo_fin: motivo,
+                    segundos: this.segundos
+                };
+
+                fetch(CFG.urlFinalizar, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": CFG.csrf
+                    },
+                    body: JSON.stringify(payload)
+                })
+                .then(res => res.json())
+                .then(data => {
+                    this.mostrarModalResultado(data);
+                })
+                .catch(err => {
+                    console.error("Error al registrar resultado:", err);
+                    // Mostrar modal de resultado aun si la red falla temporalmente
+                    this.mostrarModalResultado({
+                        puntaje: this.score,
+                        mejor_puntaje: Math.max(this.score, CFG.puntajePrevio || 0),
+                        es_victoria: this.estado === ESTADO.GANADA,
+                        motivo_fin: motivo
+                    });
+                });
+            }
+
+            mostrarModalRnf(item) {
+                document.getElementById("rnfModalIdentificador").textContent = item.identificador || "RNF";
+                document.getElementById("rnfModalCategory").textContent = item.categoria || "Requisito No Funcional";
+                document.getElementById("rnfModalTexto").textContent = `"${item.texto}"`;
+                document.getElementById("rnfModalExplicacion").textContent = item.explicacion;
+                modalRnf.classList.add("active");
+            }
+
+            mostrarModalRf(item) {
+                document.getElementById("rfModalIdentificador").textContent = item.identificador || "RF";
+                document.getElementById("rfModalCategory").textContent = item.categoria || "Requisito Funcional";
+                document.getElementById("rfModalTexto").textContent = `"${item.texto}"`;
+                document.getElementById("rfModalExplicacion").textContent = item.explicacion || (
+                    "Este elemento representa una función o servicio que el sistema debe realizar, por lo que es un Requerimiento Funcional y no un atributo de calidad."
+                );
+                modalRf.classList.add("active");
+            }
+
+            mostrarModalResultado(data) {
+                const isWin = this.estado === ESTADO.GANADA;
+                const modalIcon = document.getElementById("resultModalIcon");
+                const modalBadge = document.getElementById("resultModalBadge");
+                const modalTitle = document.getElementById("resultModalTitle");
+                const modalDesc = document.getElementById("resultModalDesc");
+                const resultScore = document.getElementById("resultScore");
+                const resultRnf = document.getElementById("resultRnf");
+                const resultTime = document.getElementById("resultTime");
+                const resultBestScore = document.getElementById("resultBestScore");
+                const lessonTitle = document.getElementById("resultLessonTitle");
+                const lessonText = document.getElementById("resultLessonText");
+
+                resultScore.textContent = data.puntaje !== undefined ? data.puntaje : this.score;
+                resultRnf.textContent = `${this.objetivosRecolectados}/${this.totalObjetivos}`;
+                resultTime.textContent = this.formatearTiempo(this.segundos);
+                resultBestScore.textContent = data.mejor_puntaje !== undefined ? data.mejor_puntaje : this.score;
+
+                if (isWin) {
+                    modalIcon.className = "modal-icon success";
+                    modalIcon.innerHTML = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>`;
+                    modalBadge.className = "modal-badge target";
+                    modalBadge.textContent = "¡Nivel Completado!";
+                    modalTitle.textContent = "¡Excelente Trabajo!";
+                    modalDesc.textContent = "Has identificado y recolectado exitosamente todos los Requerimientos No Funcionales del software.";
+                    lessonTitle.textContent = "Objetivo Pedagógico Alcanzado";
+                    lessonText.textContent = "Has demostrado dominar la distinción entre las características de calidad/rendimiento (RNF) y las funciones operativas del sistema (RF).";
+                } else {
+                    modalIcon.className = "modal-icon danger";
+                    modalIcon.innerHTML = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`;
+                    modalBadge.className = "modal-badge obstacle";
+                    modalBadge.textContent = "Partida Terminada";
+                    modalTitle.textContent = "¡Fin del intento!";
+
+                    if (this.motivoFin === MOTIVO_FIN.TOCO_OBSTACULO) {
+                        modalDesc.textContent = "Has recogido un Requerimiento Funcional en lugar de un RNF. Recuerda que los RF representan acciones o procesos, no restricciones de calidad.";
+                    } else if (this.motivoFin === MOTIVO_FIN.CHOQUE_MURO) {
+                        modalDesc.textContent = "La serpiente chocó contra el límite del tablero de juego.";
+                    } else {
+                        modalDesc.textContent = "La serpiente chocó contra su propio cuerpo.";
+                    }
+
+                    lessonTitle.textContent = "Diferencia Clave: RF vs RNF";
+                    lessonText.textContent = "Los Requerimientos Funcionales describen 'QUÉ' hace el software (ej. registrar usuario, calcular total), mientras que los Requerimientos No Funcionales describen 'CÓMO' debe desempeñarse (ej. tiempo de respuesta, cifrado de contraseñas, disponibilidad).";
+                }
+
+                modalResult.classList.add("active");
+            }
+
+            formatearTiempo(totalSeg) {
+                const min = Math.floor(totalSeg / 60);
+                const seg = totalSeg % 60;
+                return `${String(min).padStart(2, "0")}:${String(seg).padStart(2, "0")}`;
+            }
+
+            actualizarUI() {
+                scoreDisplay.textContent = this.score;
+                rnfDisplay.textContent = `${this.objetivosRecolectados}/${this.totalObjetivos}`;
+                timerDisplay.textContent = this.formatearTiempo(this.segundos);
+                lengthDisplay.textContent = this.snake.length;
+
+                // Barra superior
+                const pct = this.totalObjetivos > 0 ? (this.objetivosRecolectados / this.totalObjetivos) * 100 : 0;
+                pbar.style.width = `${pct}%`;
+                ppill.textContent = `${this.objetivosRecolectados}/${this.totalObjetivos}`;
+            }
+
+            render() {
+                const cs = this.cellSize;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Dibujar fondo de cuadricula sutil
+                ctx.fillStyle = PALETA.boardBg;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.strokeStyle = PALETA.gridLine;
+                ctx.lineWidth = 1;
+                for (let x = 0; x <= this.columnas; x++) {
+                    ctx.beginPath();
+                    ctx.moveTo(x * cs, 0);
+                    ctx.lineTo(x * cs, this.filas * cs);
+                    ctx.stroke();
+                }
+                for (let y = 0; y <= this.filas; y++) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y * cs);
+                    ctx.lineTo(this.columnas * cs, y * cs);
+                    ctx.stroke();
+                }
+
+                // Dibujar ítems
+                this.items.forEach(item => {
+                    const px = item.x * cs;
+                    const py = item.y * cs;
+                    const radius = cs * 0.42;
+                    const cx = px + cs / 2;
+                    const cy = py + cs / 2;
+
+                    if (item.es_objetivo) {
+                        // RNF: Verde con halo y check
+                        ctx.save();
+                        ctx.shadowColor = "rgba(16, 194, 143, 0.4)";
+                        ctx.shadowBlur = 10;
+                        ctx.fillStyle = PALETA.targetGreen;
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+
+                        // Icono o letra indicativa
+                        ctx.fillStyle = "#ffffff";
+                        ctx.font = `bold ${Math.floor(cs * 0.44)}px 'Plus Jakarta Sans', sans-serif`;
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.fillText("✓", cx, cy);
+                    } else {
+                        // RF: Rojo con forma redondeada y cruz
+                        ctx.save();
+                        ctx.shadowColor = "rgba(239, 68, 68, 0.35)";
+                        ctx.shadowBlur = 8;
+                        ctx.fillStyle = PALETA.obstacleRed;
+                        ctx.beginPath();
+                        ctx.roundRect(px + 4, py + 4, cs - 8, cs - 8, 8);
+                        ctx.fill();
+                        ctx.restore();
+
+                        ctx.fillStyle = "#ffffff";
+                        ctx.font = `bold ${Math.floor(cs * 0.44)}px 'Plus Jakarta Sans', sans-serif`;
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.fillText("✕", cx, cy);
+                    }
+                });
+
+                // Dibujar serpiente
+                this.snake.forEach((seg, idx) => {
+                    const px = seg.x * cs;
+                    const py = seg.y * cs;
+                    const pad = 2;
+
+                    if (idx === 0) {
+                        // Cabeza
+                        ctx.save();
+                        ctx.shadowColor = "rgba(91, 91, 240, 0.45)";
+                        ctx.shadowBlur = 12;
+                        ctx.fillStyle = PALETA.snakeHead;
+                        ctx.beginPath();
+                        ctx.roundRect(px + pad, py + pad, cs - pad * 2, cs - pad * 2, 8);
+                        ctx.fill();
+                        ctx.restore();
+
+                        // Ojos de la cabeza
+                        ctx.fillStyle = "#ffffff";
+                        const eyeRadius = Math.max(2, cs * 0.1);
+                        let e1x = px + cs * 0.3, e1y = py + cs * 0.3;
+                        let e2x = px + cs * 0.7, e2y = py + cs * 0.3;
+
+                        if (this.dir.x === 1) { // Derecha
+                            e1x = px + cs * 0.65; e1y = py + cs * 0.3;
+                            e2x = px + cs * 0.65; e2y = py + cs * 0.7;
+                        } else if (this.dir.x === -1) { // Izquierda
+                            e1x = px + cs * 0.35; e1y = py + cs * 0.3;
+                            e2x = px + cs * 0.35; e2y = py + cs * 0.7;
+                        } else if (this.dir.y === 1) { // Abajo
+                            e1x = px + cs * 0.3; e1y = py + cs * 0.65;
+                            e2x = px + cs * 0.7; e2y = py + cs * 0.65;
+                        } else if (this.dir.y === -1) { // Arriba
+                            e1x = px + cs * 0.3; e1y = py + cs * 0.35;
+                            e2x = px + cs * 0.7; e2y = py + cs * 0.35;
+                        }
+
+                        ctx.beginPath();
+                        ctx.arc(e1x, e1y, eyeRadius, 0, Math.PI * 2);
+                        ctx.arc(e2x, e2y, eyeRadius, 0, Math.PI * 2);
+                        ctx.fill();
+                    } else {
+                        // Cuerpo
+                        ctx.fillStyle = PALETA.snakeBody;
+                        ctx.beginPath();
+                        ctx.roundRect(px + pad + 1, py + pad + 1, cs - pad * 2 - 2, cs - pad * 2 - 2, 6);
+                        ctx.fill();
+                    }
+                });
+            }
+        }
+
+        // =============================================================
+        // Inicialización y enlace de eventos
+        // =============================================================
+        let partida = new PartidaSnake(nivelActual);
+
+        // Actualizar datos del nivel en el DOM
+        levelTitle.textContent = `Nivel ${nivelActual.numero}: ${nivelActual.titulo}`;
+        levelTopic.textContent = nivelActual.tema || "Requerimientos";
+        document.getElementById("modalInstTitle").textContent = nivelActual.titulo;
+        if (nivelActual.instrucciones) {
+            document.getElementById("modalInstText").textContent = nivelActual.instrucciones;
+        }
+
+        // Mostrar modal de instrucciones al inicio (Paso 1 del flujo normal)
+        modalInstructions.classList.add("active");
+
+        btnStartGame.addEventListener("click", () => {
+            modalInstructions.classList.remove("active");
+            partida.render();
+            partida.actualizarUI();
+            startPrompt.style.display = "flex";
+        });
+
+        // Eventos de teclado
+        window.addEventListener("keydown", (e) => {
+            const key = e.key.toLowerCase();
+
+            if (["arrowup", "arrowdown", "arrowleft", "arrowright", " ", "w", "a", "s", "d"].includes(key)) {
+                // Prevenir scroll en la ventana
+                e.preventDefault();
+            }
+
+            if (partida.estado === ESTADO.MOSTRANDO_INFO) return;
+
+            if (key === "arrowup" || key === "w") {
+                partida.cambiarDireccion({ x: 0, y: -1 });
+            } else if (key === "arrowdown" || key === "s") {
+                partida.cambiarDireccion({ x: 0, y: 1 });
+            } else if (key === "arrowleft" || key === "a") {
+                partida.cambiarDireccion({ x: -1, y: 0 });
+            } else if (key === "arrowright" || key === "d") {
+                partida.cambiarDireccion({ x: 1, y: 0 });
+            } else if (key === "p") {
+                if (partida.estado === ESTADO.EN_CURSO) {
+                    partida.estado = ESTADO.ESPERANDO_INICIO;
+                    startPrompt.textContent = "Juego pausado. Presiona una tecla para continuar.";
+                    startPrompt.style.display = "flex";
+                }
+            } else if (key === "r") {
+                reiniciarNivel();
+            }
+        });
+
+        // Controles táctiles D-Pad
+        document.getElementById("dpad").addEventListener("click", (e) => {
+            const btn = e.target.closest("button");
+            if (!btn || !btn.dataset.d) return;
+            const [dx, dy] = btn.dataset.d.split(",").map(Number);
+            partida.cambiarDireccion({ x: dx, y: dy });
+        });
+
+        // Cerrar modal RNF
+        btnContinueRnf.addEventListener("click", () => {
+            modalRnf.classList.remove("active");
+            partida.cerrarInformacion();
+        });
+
+        // Cerrar modal RF
+        btnUnderstandRf.addEventListener("click", () => {
+            modalRf.classList.remove("active");
+            partida.cerrarInformacion();
+        });
+
+        // Reiniciar nivel
+        function reiniciarNivel() {
+            modalInstructions.classList.remove("active");
+            modalRnf.classList.remove("active");
+            modalRf.classList.remove("active");
+            modalResult.classList.remove("active");
+
+            partida.detenerLoop();
+            partida.detenerCronometro();
+            partida.reset();
+            partida.render();
+            partida.actualizarUI();
+            startPrompt.textContent = "Presiona una flecha o WASD para comenzar";
+            startPrompt.style.display = "flex";
+        }
+
+        btnRestart.addEventListener("click", reiniciarNivel);
+        btnRetryGame.addEventListener("click", reiniciarNivel);
+
+        btnExitToMenu.addEventListener("click", () => {
+            window.location.href = CFG.urlTemario;
+        });
+
+        // Renderizado inicial
+        partida.render();
+        partida.actualizarUI();
+
+    })();
+    </script>
+</body>
+</html>
