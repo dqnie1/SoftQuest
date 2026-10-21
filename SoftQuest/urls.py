@@ -14,7 +14,6 @@ urlpatterns = [
     path('', include('minijuegos.memorama.urls')),
     path('', include('minijuegos.trivia.urls')),
     path('', include('minijuegos.match.urls')), #url de minijuego
-    path('admin/', admin.site.urls),
     path('pacman/', include('minijuegos.pacman.urls')), #url de minijuego
     path('nave/', include('minijuegos.nave.urls')), #url de minijuego nave espacial
 ]
