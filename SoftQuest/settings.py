@@ -43,7 +43,7 @@ SECRET_KEY = 'django-insecure-bxw7rg@b5^3r!e3y%cb#^!6nfwhta)u38dfu*dj6sz^fvt88@9
 DEBUG = True
 
 # aqui ponemos quien es el host
-ALLOWED_HOSTS = ['.vercel.app', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['.vercel.app', 'localhost', '127.0.0.1', 'testserver']
 
 
 
@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'minijuegos.trivia',
     'minijuegos.match',
     'minijuegos.pacman',
+    'minijuegos.snake',
     'contenido', # exploracion de mundos y temarios
     'login',
 ]
@@ -178,6 +179,7 @@ STATICFILES_DIRS = [
     BASE_DIR / 'minijuegos' / 'match' / 'template' / 'style',
     BASE_DIR / 'minijuegos' / 'trivia' / 'template' / 'style',
     BASE_DIR / 'minijuegos' / 'pacman' / 'templates' / 'style',
+    BASE_DIR / 'minijuegos' / 'snake' / 'templates' / 'style',
 ]
 
 

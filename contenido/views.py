@@ -119,6 +119,12 @@ def temario_mundo(request, mundo_id):
             except Exception:
                 act.url = f'/pacman/{act.id}/'
             act.tipo_display = 'Pacman'
+        elif tipo_normalizado == 'snake':
+            try:
+                act.url = reverse('snake:jugar', kwargs={'actividad_id': act.id})
+            except Exception:
+                act.url = f'/snake/{act.id}/'
+            act.tipo_display = 'Snake'
         else:
             act.url = ''
             act.tipo_display = act.tipo or 'Actividad'
