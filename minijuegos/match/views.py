@@ -15,7 +15,7 @@ from .operaciones.OperacionesMatch import OperacionesMatch
 def obtenerConceptos(request, id_match=None):
     conceptos = OperacionesMatch().obtenerTerminosYDefinicionesRevuelta(id_match)
 
-    return render(request, 'match.html', {
+    return render(request, 'Match.html', {
         'conceptos': conceptos,
         'hay_conceptos': bool(conceptos),
         'id_match': id_match,
