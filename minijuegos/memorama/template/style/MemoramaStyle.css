@@ -75,6 +75,18 @@ body {
   font-size: 0.85rem;
 }
 
+.barra__regresar {
+  color: var(--tinta-suave);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.barra__regresar:hover {
+  color: var(--acento);
+}
+
 .barra__stats {
   display: flex;
   gap: 1.5rem;
@@ -284,6 +296,16 @@ body {
 
 .boton:hover {
   background: #2f49d9;
+}
+
+.boton--secundario {
+  background: #eef2ff;
+  color: var(--acento);
+  border: 1px solid var(--borde);
+}
+
+.boton--secundario:hover {
+  background: #e4e8f8;
 }
 
 .boton:focus-visible {
