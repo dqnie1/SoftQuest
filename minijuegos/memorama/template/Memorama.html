@@ -27,6 +27,11 @@
                     <dd id="stat-aciertos">0</dd>
                 </div>
             </dl>
+            {% if request.session.mundo_id %}
+            <a class="barra__regresar" href="{% url 'temario_mundo' request.session.mundo_id %}" aria-label="Regresar al temario" title="Regresar al temario">← Temario</a>
+            {% else %}
+            <a class="barra__regresar" href="{% url 'mapa_mundos' %}" aria-label="Regresar al mapa" title="Regresar al mapa">← Mapa</a>
+            {% endif %}
         </header>
 
         <section class="intro">
@@ -45,9 +50,9 @@
             <div style="display: flex; gap: 0.75rem; justify-content: center; align-items: center; flex-wrap: wrap;">
                 <button class="boton" onclick="location.reload()">Jugar de nuevo</button>
                 {% if request.session.mundo_id %}
-                <a class="boton" style="background: #eef2ff; color: var(--acento); border: 1px solid var(--borde);" href="{% url 'temario_mundo' request.session.mundo_id %}">Volver al Temario</a>
+                <a class="boton boton--secundario" href="{% url 'temario_mundo' request.session.mundo_id %}">Volver al Temario</a>
                 {% else %}
-                <a class="boton" style="background: #eef2ff; color: var(--acento); border: 1px solid var(--borde);" href="{% url 'mapa_mundos' %}">Volver al Mapa</a>
+                <a class="boton boton--secundario" href="{% url 'mapa_mundos' %}">Volver al Mapa</a>
                 {% endif %}
             </div>
         </dialog>

@@ -18,6 +18,24 @@ body {
     border-bottom: 1px solid #E5E9F2;
 }
 
+.top-back {
+    flex: 0 0 auto;
+    margin-left: auto;
+    padding: 6px 0 6px 8px;
+    border: 0;
+    background: transparent;
+    color: #6B7494;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.top-back:hover {
+    color: #5B5BF0;
+}
+
 .brand {
     display: flex;
     align-items: center;
@@ -484,5 +502,10 @@ code {
     .top {
         padding: 12px 16px;
         gap: 10px;
+    }
+
+    .top-back {
+        padding-left: 4px;
+        font-size: 12px;
     }
 }
