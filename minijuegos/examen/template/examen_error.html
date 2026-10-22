@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'TemarioStyle.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Sora:wght@700;800&display=swap" rel="stylesheet">
+    <title>Error al Cargar Examen · SoftQuest</title>
+</head>
+<body style="display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #f8fafc; padding: 1.5rem;">
+    <div style="background: white; border-radius: 20px; border: 1px solid #e2e8f0; max-width: 520px; width: 100%; padding: 2.5rem; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
+        <div style="width: 72px; height: 72px; border-radius: 50%; background: #fee2e2; color: #ef4444; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        </div>
+        <h2 style="font-family: var(--font-heading); font-size: 1.6rem; color: #1e293b; margin-bottom: 0.75rem;">No se pudo cargar el examen</h2>
+        <p style="color: #64748b; font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.75rem;">
+            {{ mensaje_error|default:"El sistema SoftQuest no pudo recuperar las preguntas o los pares de conceptos y definiciones necesarios para iniciar la evaluación." }}
+        </p>
+        <a href="{{ url_temario }}" class="btn-primary" style="display: inline-block; width: 100%; text-decoration: none; padding: 0.9rem; text-align: center; font-weight: 700; border-radius: 12px;">
+            Regresar al temario
+        </a>
+    </div>
+</body>
+</html>

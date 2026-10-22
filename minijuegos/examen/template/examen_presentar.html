@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'TemarioStyle.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Sora:wght@700;800&display=swap" rel="stylesheet">
+    <title>Examen en Curso · {{ mundo.nombre }}</title>
+    <style>
+        body {
+            background-color: #f1f5f9;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-y: auto;
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-main);
+            color: #1e293b;
+        }
+
+        /* Topbar de Examen */
+        .examen-topbar {
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 0.75rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        }
+
+        .examen-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 800;
+            font-size: 1.15rem;
+            color: #4f46e5;
+            font-family: var(--font-heading);
+        }
+
+        /* Cronómetro */
+        .cronometro-box {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #ede9fe;
+            color: #6366f1;
+            padding: 0.5rem 1.25rem;
+            border-radius: 999px;
+            font-family: var(--font-heading);
+            font-size: 1.1rem;
+            font-weight: 700;
+            border: 1px solid #ddd6fe;
+            transition: all 0.3s ease;
+        }
+
+        .cronometro-box.alerta {
+            background: #fee2e2;
+            color: #dc2626;
+            border-color: #fca5a5;
+            animation: pulse-alerta 1s infinite;
+        }
+
+        @keyframes pulse-alerta {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .btn-abandonar {
+            background: #f1f5f9;
+            color: #64748b;
+            border: 1px solid #cbd5e1;
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-abandonar:hover {
+            background: #fee2e2;
+            color: #ef4444;
+            border-color: #fca5a5;
+        }
+
+        /* Layout Examen */
+        .examen-main {
+            max-width: 900px;
+            width: 100%;
+            margin: 2rem auto;
+            padding: 0 1.5rem 3rem;
+            flex: 1;
+        }
+
+        /* Tarjeta de Progreso de Bloques */
+        .bloques-progreso-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.25rem 1.5rem;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 1.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+        }
+
+        .bloque-info h2 {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 0.25rem;
+        }
+
+        .bloque-info p {
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+
+        .progress-pill-track {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .progress-pill {
+            padding: 0.35rem 0.85rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .progress-pill.activo {
+            background: #4f46e5;
+            color: white;
+        }
+        .progress-pill.cerrado {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+        .progress-pill.pendiente {
+            background: #f1f5f9;
+            color: #94a3b8;
+        }
+
+        /* Secciones del Bloque */
+        .seccion-reactivos {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+        }
+
+        .seccion-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .seccion-badge {
+            background: #e0e7ff;
+            color: #4338ca;
+            padding: 0.35rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .seccion-titulo {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        /* Preguntas de Trivia */
+        .pregunta-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 1.25rem;
+            margin-bottom: 1.25rem;
+            transition: border-color 0.2s;
+        }
+        .pregunta-item.contestada {
+            border-color: #cbd5e1;
+            background: #ffffff;
+        }
+
+        .pregunta-enunciado {
+            font-size: 0.98rem;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 1rem;
+            line-height: 1.5;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .pregunta-numero {
+            background: #4f46e5;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .opciones-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .opcion-label {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: white;
+            border: 1px solid #e2e8f0;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+            color: #334155;
+        }
+        .opcion-label:hover {
+            border-color: #a5b4fc;
+            background: #f5f7ff;
+        }
+        .opcion-label.seleccionada {
+            border-color: #4f46e5;
+            background: #eef2ff;
+            color: #312e81;
+            font-weight: 600;
+        }
+        .opcion-radio {
+            accent-color: #4f46e5;
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Ejercicio de Relacionar Conceptos */
+        .match-instructions {
+            font-size: 0.88rem;
+            color: #64748b;
+            margin-bottom: 1.25rem;
+            line-height: 1.5;
+        }
+
+        .match-columns-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .match-col-header {
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+            margin-bottom: 0.75rem;
+        }
+
+        .match-card {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+        .match-card:hover {
+            border-color: #a5b4fc;
+            background: white;
+            transform: translateY(-1px);
+        }
+        .match-card.seleccionado {
+            border-color: #4f46e5;
+            background: #eef2ff;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+        }
+        .match-card.emparejado {
+            border-color: #10b981;
+            background: #ecfdf5;
+            color: #065f46;
+            font-weight: 600;
+        }
+        .match-tag {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .match-tag.active {
+            background: #10b981;
+            color: white;
+        }
+
+        /* Footer de navegación entre bloques */
+        .examen-footer-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 2rem;
+            padding: 1rem 0;
+        }
+
+        .btn-bloque-next {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 0.9rem 2rem;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-bloque-next:hover {
+            background: #4338ca;
+            transform: translateY(-2px);
+        }
+
+        /* Modales */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-card {
+            background: white;
+            border-radius: 20px;
+            max-width: 480px;
+            width: 100%;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            animation: modal-pop 0.25s ease-out;
+        }
+        @keyframes modal-pop {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .modal-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.25rem;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+        .modal-actions button {
+            flex: 1;
+            padding: 0.8rem;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-modal-cancel {
+            background: #f1f5f9;
+            color: #475569;
+        }
+        .btn-modal-cancel:hover {
+            background: #e2e8f0;
+        }
+        .btn-modal-danger {
+            background: #ef4444;
+            color: white;
+        }
+        .btn-modal-danger:hover {
+            background: #dc2626;
+        }
+        .btn-modal-primary {
+            background: #4f46e5;
+            color: white;
+        }
+        .btn-modal-primary:hover {
+            background: #4338ca;
+        }
+    </style>
+</head>
+<body>
+    <!-- Topbar con Cronómetro y Navegación -->
+    <header class="examen-topbar">
+        <div class="examen-brand">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+            <span>SoftQuest · Examen Final</span>
+        </div>
+
+        <!-- Cronómetro Global (RN-44) -->
+        <div class="cronometro-box" id="cronometroBox" title="Tiempo restante global">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <span id="cronometroDisplay">10:00</span>
+        </div>
+
+        <button type="button" class="btn-abandonar" id="btnAbandonar" onclick="abrirModalAbandonar()">
+            Abandonar examen
+        </button>
+    </header>
+
+    <!-- Contenedor Principal del Examen -->
+    <main class="examen-main">
+        <!-- Tarjeta de Progreso de Bloques -->
+        <div class="bloques-progreso-card">
+            <div class="bloque-info">
+                <h2 id="bloqueTitulo">Bloque 1: Unidad</h2>
+                <p id="bloqueSubtitulo">Preguntas de trivia y ejercicio de relacionar</p>
+            </div>
+            <div class="progress-pill-track" id="pillsTrack">
+                <!-- Se llena dinámicamente con las píldoras de cada bloque -->
+            </div>
+        </div>
+
+        <!-- Contenedor dinámico del Bloque Activo (RN-40) -->
+        <div id="bloqueContenido">
+            <!-- Renderizado por JavaScript -->
+        </div>
+
+        <!-- Barra inferior de acciones -->
+        <div class="examen-footer-actions">
+            <div style="font-size: 0.85rem; color: #64748b;">
+                <span id="reactivosRespondidosCount">0</span> de <span id="reactivosTotalBloque">0</span> reactivos respondidos en este bloque
+            </div>
+            <button type="button" class="btn-bloque-next" id="btnSiguienteBloque" onclick="intentarAvanzarBloque()">
+                <span>Finalizar bloque</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            </button>
+        </div>
+    </main>
+
+    <!-- Modal 1: Abandonar Examen (Flujo Alternativo 1.4) -->
+    <div class="modal-overlay" id="modalAbandonar">
+        <div class="modal-card">
+            <div class="modal-icon" style="background: #fee2e2; color: #ef4444;">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            </div>
+            <h3 style="font-family: var(--font-heading); font-size: 1.3rem; margin-bottom: 0.5rem;">¿Deseas salir del examen?</h3>
+            <p style="font-size: 0.9rem; color: #64748b; line-height: 1.5;">
+                El intento se cancelará inmediatamente y <strong>no se guardarán tus respuestas ni se registrará calificación</strong>.
+            </p>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal-cancel" onclick="cerrarModal('modalAbandonar')">Continuar examen</button>
+                <button type="button" class="btn-modal-danger" id="btnConfirmarSalida" onclick="window.location.href='{{ url_abandonar }}'">Abandonar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Reactivos sin responder al finalizar bloque (Flujo Alternativo 1.3) -->
+    <div class="modal-overlay" id="modalIncompletos">
+        <div class="modal-card">
+            <div class="modal-icon" style="background: #fef3c7; color: #d97706;">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            </div>
+            <h3 style="font-family: var(--font-heading); font-size: 1.3rem; margin-bottom: 0.5rem;">Reactivos sin responder</h3>
+            <p style="font-size: 0.9rem; color: #64748b; line-height: 1.5;">
+                Tienes preguntas o conceptos sin responder en este bloque. Recuerda que una vez cerrado el bloque <strong>no podrás regresar a modificarlo</strong>.
+            </p>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal-cancel" onclick="cerrarModal('modalIncompletos')">Volver a revisar</button>
+                <button type="button" class="btn-modal-primary" onclick="confirmarCierreBloque()">Finalizar de todos modos</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 3: Tiempo Agotado -->
+    <div class="modal-overlay" id="modalTiempoAgotado">
+        <div class="modal-card">
+            <div class="modal-icon" style="background: #fee2e2; color: #ef4444;">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            </div>
+            <h3 style="font-family: var(--font-heading); font-size: 1.3rem; margin-bottom: 0.5rem;">¡Tiempo agotado!</h3>
+            <p style="font-size: 0.9rem; color: #64748b; line-height: 1.5;">
+                El tiempo global del examen ha finalizado. Las respuestas que contestaste se calificarán y los reactivos no respondidos se considerarán incorrectos.
+            </p>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal-primary" style="width: 100%;" onclick="enviarExamenFinal()">Ver resultados</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 4: Calificando Examen (Carga) -->
+    <div class="modal-overlay" id="modalCargando">
+        <div class="modal-card" style="max-width: 380px;">
+            <div class="modal-icon" style="background: #ede9fe; color: #6366f1;">
+                <svg class="spinner" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
+            </div>
+            <h3 style="font-family: var(--font-heading); font-size: 1.2rem; margin-bottom: 0.5rem;">Calificando examen...</h3>
+            <p style="font-size: 0.85rem; color: #64748b;">Estamos evaluando tus respuestas y generando el reporte pedagógico.</p>
+        </div>
+    </div>
+
+    <!-- Token CSRF -->
+    {% csrf_token %}
+
+    <script>
+        // Datos proporcionados por Django
+        const BLOQUES = {{ bloques_json|safe }};
+        const TOTAL_BLOQUES = {{ total_bloques }};
+        const TIEMPO_LIMITE_SEGUNDOS = {{ tiempo_limite_segundos|default:600 }};
+        const URL_CALIFICAR = "{{ url_calificar }}";
+        const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        let bloqueActualIndex = 0;
+        let tiempoRestante = TIEMPO_LIMITE_SEGUNDOS;
+        let cronometroInterval = null;
+        let tiempoInicio = Date.now();
+
+        // Respuestas recopiladas del usuario: { 'trivia_<id>': answer_id, 'concepto_<id>': definition_id }
+        const respuestasUsuario = {};
+
+        // Estado interactivo de relacionar conceptos en el bloque actual
+        let conceptoSeleccionado = null; // id del concepto clickeado
+        let emparejamientosBloque = {}; // { concepto_id: definicion_id }
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', () => {
+            iniciarCronometro();
+            renderizarBloque(bloqueActualIndex);
+        });
+
+        // 1. Cronómetro Global (RN-44)
+        function iniciarCronometro() {
+            actualizarDisplayCronometro();
+            cronometroInterval = setInterval(() => {
+                tiempoRestante--;
+                actualizarDisplayCronometro();
+
+                if (tiempoRestante <= 60) {
+                    document.getElementById('cronometroBox').classList.add('alerta');
+                }
+
+                if (tiempoRestante <= 0) {
+                    clearInterval(cronometroInterval);
+                    tiempoRestante = 0;
+                    actualizarDisplayCronometro();
+                    mostrarModalTiempoAgotado();
+                }
+            }, 1000);
+        }
+
+        function actualizarDisplayCronometro() {
+            const min = Math.floor(tiempoRestante / 60);
+            const sec = tiempoRestante % 60;
+            const strMin = min < 10 ? '0' + min : min;
+            const strSec = sec < 10 ? '0' + sec : sec;
+            document.getElementById('cronometroDisplay').textContent = `${strMin}:${strSec}`;
+        }
+
+        function mostrarModalTiempoAgotado() {
+            document.getElementById('modalTiempoAgotado').classList.add('active');
+        }
+
+        // 2. Renderizado de Píldoras de Progreso
+        function renderizarPildoras() {
+            const track = document.getElementById('pillsTrack');
+            track.innerHTML = '';
+            BLOQUES.forEach((b, idx) => {
+                const pill = document.createElement('span');
+                pill.className = 'progress-pill';
+                if (idx < bloqueActualIndex) {
+                    pill.classList.add('cerrado');
+                    pill.innerHTML = `✓ Bloque ${idx + 1}`;
+                } else if (idx === bloqueActualIndex) {
+                    pill.classList.add('activo');
+                    pill.textContent = `Bloque ${idx + 1}`;
+                } else {
+                    pill.classList.add('pendiente');
+                    pill.textContent = `Bloque ${idx + 1}`;
+                }
+                track.appendChild(pill);
+            });
+        }
+
+        // 3. Renderizado del Bloque Activo (RN-40)
+        function renderizarBloque(idx) {
+            const bloque = BLOQUES[idx];
+            document.getElementById('bloqueTitulo').textContent = `Bloque ${idx + 1} de ${TOTAL_BLOQUES}: ${bloque.nombre_temario}`;
+            document.getElementById('bloqueSubtitulo').textContent = `Reactivos de la unidad ${bloque.nombre_temario}`;
+            renderizarPildoras();
+
+            const container = document.getElementById('bloqueContenido');
+            container.innerHTML = '';
+
+            // Sección 1: Preguntas de Trivia
+            if (bloque.preguntas && bloque.preguntas.length > 0) {
+                const secTrivia = document.createElement('div');
+                secTrivia.className = 'seccion-reactivos';
+                secTrivia.innerHTML = `
+                    <div class="seccion-header">
+                        <span class="seccion-badge">Parte A</span>
+                        <div class="seccion-titulo">Preguntas de Opción Múltiple (Trivia)</div>
+                    </div>
+                `;
+
+                bloque.preguntas.forEach((p, pIdx) => {
+                    const pDiv = document.createElement('div');
+                    pDiv.className = 'pregunta-item';
+                    pDiv.id = `pregunta_item_${p.id}`;
+
+                    const respondidaVal = respuestasUsuario[`trivia_${p.id}`];
+                    if (respondidaVal !== undefined) pDiv.classList.add('contestada');
+
+                    let opcionesHtml = '';
+                    p.respuestas.forEach(r => {
+                        const checked = (respondidaVal == r.id) ? 'checked' : '';
+                        const labelClass = (respondidaVal == r.id) ? 'opcion-label seleccionada' : 'opcion-label';
+                        opcionesHtml += `
+                            <label class="${labelClass}" id="label_r_${r.id}">
+                                <input type="radio" name="trivia_${p.id}" value="${r.id}" class="opcion-radio" ${checked} onchange="seleccionarRespuestaTrivia(${p.id}, ${r.id})">
+                                <span>${r.texto}</span>
+                            </label>
+                        `;
+                    });
+
+                    pDiv.innerHTML = `
+                        <div class="pregunta-enunciado">
+                            <span class="pregunta-numero">${pIdx + 1}</span>
+                            <span>${p.texto}</span>
+                        </div>
+                        <div class="opciones-grid">
+                            ${opcionesHtml}
+                        </div>
+                    `;
+                    secTrivia.appendChild(pDiv);
+                });
+
+                container.appendChild(secTrivia);
+            }
+
+            // Sección 2: Relacionar Conceptos y Definiciones
+            if (bloque.conceptos && bloque.conceptos.length > 0) {
+                const secMatch = document.createElement('div');
+                secMatch.className = 'seccion-reactivos';
+                secMatch.innerHTML = `
+                    <div class="seccion-header">
+                        <span class="seccion-badge">Parte B</span>
+                        <div class="seccion-titulo">Relacionar Conceptos y Definiciones</div>
+                    </div>
+                    <p class="match-instructions">
+                        Haz clic en un <strong>Concepto</strong> (columna izquierda) y luego haz clic en su <strong>Definición</strong> correspondiente (columna derecha) para emparejarlos.
+                    </p>
+                    <div class="match-columns-grid">
+                        <div>
+                            <div class="match-col-header">Conceptos / Términos</div>
+                            <div id="columnaConceptos"></div>
+                        </div>
+                        <div>
+                            <div class="match-col-header">Definiciones</div>
+                            <div id="columnaDefiniciones"></div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(secMatch);
+
+                renderizarMatchColumns(bloque);
+            }
+
+            // Actualizar botón de acción
+            const btnNext = document.getElementById('btnSiguienteBloque');
+            if (idx === TOTAL_BLOQUES - 1) {
+                btnNext.innerHTML = `<span>Finalizar Examen</span> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+            } else {
+                btnNext.innerHTML = `<span>Finalizar Bloque ${idx + 1}</span> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>`;
+            }
+
+            actualizarContadorReactivosBloque();
+        }
+
+        // Selección de trivia
+        function seleccionarRespuestaTrivia(preguntaId, respuestaId) {
+            respuestasUsuario[`trivia_${preguntaId}`] = respuestaId;
+
+            // Actualizar estilo
+            const radios = document.getElementsByName(`trivia_${preguntaId}`);
+            radios.forEach(radio => {
+                const label = document.getElementById(`label_r_${radio.value}`);
+                if (label) {
+                    if (radio.checked) {
+                        label.classList.add('seleccionada');
+                    } else {
+                        label.classList.remove('seleccionada');
+                    }
+                }
+            });
+
+            const pItem = document.getElementById(`pregunta_item_${preguntaId}`);
+            if (pItem) pItem.classList.add('contestada');
+
+            actualizarContadorReactivosBloque();
+        }
+
+        // 4. Lógica de Relacionar Conceptos
+        function renderizarMatchColumns(bloque) {
+            const colConceptos = document.getElementById('columnaConceptos');
+            const colDefiniciones = document.getElementById('columnaDefiniciones');
+            colConceptos.innerHTML = '';
+            colDefiniciones.innerHTML = '';
+
+            // Conceptos
+            bloque.conceptos.forEach(c => {
+                const cDiv = document.createElement('div');
+                cDiv.className = 'match-card';
+                cDiv.id = `card_concepto_${c.id}`;
+                cDiv.onclick = () => clickConcepto(c.id);
+
+                const emparejadoCon = respuestasUsuario[`concepto_${c.id}`];
+                if (emparejadoCon !== undefined) {
+                    cDiv.classList.add('emparejado');
+                    cDiv.innerHTML = `<span>${c.termino}</span> <span class="match-tag active">Enlazado</span>`;
+                } else {
+                    cDiv.innerHTML = `<span>${c.termino}</span> <span class="match-tag" style="background:#e2e8f0; color:#64748b;">Seleccionar</span>`;
+                }
+
+                colConceptos.appendChild(cDiv);
+            });
+
+            // Definiciones
+            bloque.definiciones.forEach(d => {
+                const dDiv = document.createElement('div');
+                dDiv.className = 'match-card';
+                dDiv.id = `card_definicion_${d.id}`;
+                dDiv.onclick = () => clickDefinicion(d.id);
+
+                // Verificar si alguna clave de concepto apuntó a esta definición
+                const conceptOwner = Object.keys(respuestasUsuario).find(k => k.startsWith('concepto_') && respuestasUsuario[k] == d.id);
+                if (conceptOwner) {
+                    dDiv.classList.add('emparejado');
+                    dDiv.innerHTML = `<span>${d.definicion}</span> <span class="match-tag active">Enlazado</span>`;
+                } else {
+                    dDiv.innerHTML = `<span>${d.definicion}</span> <span class="match-tag" style="background:#e2e8f0; color:#64748b;">Vincular</span>`;
+                }
+
+                colDefiniciones.appendChild(dDiv);
+            });
+        }
+
+        function clickConcepto(cId) {
+            // Deseleccionar previo
+            if (conceptoSeleccionado) {
+                const prev = document.getElementById(`card_concepto_${conceptoSeleccionado}`);
+                if (prev) prev.classList.remove('seleccionado');
+            }
+
+            conceptoSeleccionado = cId;
+            const current = document.getElementById(`card_concepto_${cId}`);
+            if (current) current.classList.add('seleccionado');
+        }
+
+        function clickDefinicion(defId) {
+            if (!conceptoSeleccionado) {
+                alert('Primero selecciona un concepto de la columna izquierda para vincularlo a esta definición.');
+                return;
+            }
+
+            // Desvincular cualquier concepto previo que tuviera esta definición
+            for (let k in respuestasUsuario) {
+                if (k.startsWith('concepto_') && respuestasUsuario[k] == defId) {
+                    delete respuestasUsuario[k];
+                }
+            }
+
+            // Asignar vínculo
+            respuestasUsuario[`concepto_${conceptoSeleccionado}`] = defId;
+
+            // Resetear selección
+            const cCard = document.getElementById(`card_concepto_${conceptoSeleccionado}`);
+            if (cCard) cCard.classList.remove('seleccionado');
+            conceptoSeleccionado = null;
+
+            // Volver a renderizar columnas para reflejar el emparejamiento
+            renderizarMatchColumns(BLOQUES[bloqueActualIndex]);
+            actualizarContadorReactivosBloque();
+        }
+
+        // 5. Contadores del Bloque
+        function actualizarContadorReactivosBloque() {
+            const bloque = BLOQUES[bloqueActualIndex];
+            let respondidos = 0;
+            let total = 0;
+
+            if (bloque.preguntas) {
+                total += bloque.preguntas.length;
+                bloque.preguntas.forEach(p => {
+                    if (respuestasUsuario[`trivia_${p.id}`] !== undefined) respondidos++;
+                });
+            }
+
+            if (bloque.conceptos) {
+                total += bloque.conceptos.length;
+                bloque.conceptos.forEach(c => {
+                    if (respuestasUsuario[`concepto_${c.id}`] !== undefined) respondidos++;
+                });
+            }
+
+            document.getElementById('reactivosRespondidosCount').textContent = respondidos;
+            document.getElementById('reactivosTotalBloque').textContent = total;
+            return { respondidos, total };
+        }
+
+        // 6. Navegación y Cierre de Bloques (RN-43, Flujo 1.3)
+        function intentarAvanzarBloque() {
+            const { respondidos, total } = actualizarContadorReactivosBloque();
+            if (respondidos < total) {
+                // Flujo alternativo 1.3: Advertir que existen reactivos sin responder
+                document.getElementById('modalIncompletos').classList.add('active');
+            } else {
+                confirmarCierreBloque();
+            }
+        }
+
+        function confirmarCierreBloque() {
+            cerrarModal('modalIncompletos');
+
+            // RN-43: Una vez que finaliza un bloque, este se cierra y no se puede modificar
+            if (bloqueActualIndex < TOTAL_BLOQUES - 1) {
+                bloqueActualIndex++;
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                renderizarBloque(bloqueActualIndex);
+            } else {
+                // Era el último bloque -> Enviar examen final
+                enviarExamenFinal();
+            }
+        }
+
+        // 7. Envío y Calificación Final (RN-44, RN-45, RN-51)
+        function enviarExamenFinal() {
+            clearInterval(cronometroInterval);
+            document.getElementById('modalTiempoAgotado').classList.remove('active');
+            document.getElementById('modalCargando').classList.add('active');
+
+            const tiempoEmpleado = Math.round((Date.now() - tiempoInicio) / 1000);
+
+            fetch(URL_CALIFICAR, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF_TOKEN
+                },
+                body: JSON.stringify({
+                    respuestas: respuestasUsuario,
+                    tiempo_empleado: tiempoEmpleado
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    alert('Error al calificar el examen: ' + (data.error || 'Ocurrió un error inesperado'));
+                    document.getElementById('modalCargando').classList.remove('active');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Error de conexión al enviar el examen. Inténtalo nuevamente.');
+                document.getElementById('modalCargando').classList.remove('active');
+            });
+        }
+
+        // Manejo de Modales
+        function abrirModalAbandonar() {
+            document.getElementById('modalAbandonar').classList.add('active');
+        }
+
+        function cerrarModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+    </script>
+</body>
+</html>

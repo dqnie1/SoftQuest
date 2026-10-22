@@ -14,6 +14,7 @@ urlpatterns = [
     path('', include('minijuegos.match.urls')), #url de minijuego
     path('pacman/', include('minijuegos.pacman.urls')), #url de minijuego
     path('snake/', include('minijuegos.snake.urls')), #url de minijuego snake
+    path('examen/', include('minijuegos.examen.urls')), # url de examen CU-04
 ]
 
 # Servir archivos estaticos durante el desarrollo.
