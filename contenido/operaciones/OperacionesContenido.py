@@ -219,36 +219,68 @@ class OperacionesContenido:
             defaults={'mundo_actual': mundos[0]}
         )
 
-        mundo_desbloqueado = mundos[0]
+        # Determinar el mundo más avanzado al que el usuario tiene acceso.
+        # Criterios (en orden de precedencia):
+        #   A) Mundo completado si TODAS sus actividades visibles (orden<90) están en estado 'completado'.
+        #   B) Mundo desbloqueado si tiene un IntentoExamen aprobado para el mundo anterior.
+        # IMPORTANTE: nunca retroceder — si ProgresoUsuario ya apunta a un mundo más avanzado
+        # (guardado por el examen), se respeta ese valor y solo se avanza.
+
+        from minijuegos.examen.models import IntentoExamen
+
+        # Determinar el mundo más avanzado desbloqueado via examen aprobado.
+        # Si el usuario aprobó el examen del mundo N (orden=X), entonces
+        # los mundos 1..N están superados y el mundo N+1 está desbloqueado.
+        examenes_aprobados = IntentoExamen.objects.filter(
+            usuario=usuario, aprobado=True
+        ).select_related('mundo').order_by('-mundo__orden')
+
+        # Orden máximo de mundo cuyo examen fue aprobado (0 si ninguno)
+        max_orden_aprobado = 0
+        for ie in examenes_aprobados:
+            if ie.mundo.orden > max_orden_aprobado:
+                max_orden_aprobado = ie.mundo.orden
+
+        mundo_calculado = mundos[0]
 
         for i, mundo in enumerate(mundos):
-            actividades = Actividad.objects.filter(temario__mundo=mundo)
+            # Criterio A: examen de ESTE mundo fue aprobado → superado
+            examen_aprobado = (mundo.orden <= max_orden_aprobado)
+
+            # Criterio B: todas las actividades visibles completadas
+            actividades = Actividad.objects.filter(temario__mundo=mundo, orden__lt=90)
             total_act = actividades.count()
 
             if total_act == 0:
-                mundo_desbloqueado = mundo
-                break
-
-            completadas = ProgresoActividad.objects.filter(
-                usuario=usuario,
-                actividad__in=actividades,
-                estado=self.ESTADO_COMPLETADO
-            ).count()
-
-            if completadas == total_act:
-                # Mundo completado! Desbloquear siguiente si existe
-                if i + 1 < len(mundos):
-                    mundo_desbloqueado = mundos[i + 1]
-                else:
-                    # Todos los mundos completados
-                    mundo_desbloqueado = mundo
+                actividades_completas = True
             else:
-                # Mundo actual en curso
-                mundo_desbloqueado = mundo
+                completadas = ProgresoActividad.objects.filter(
+                    usuario=usuario,
+                    actividad__in=actividades,
+                    estado=self.ESTADO_COMPLETADO,
+                ).count()
+                actividades_completas = (completadas >= total_act)
+
+            mundo_superado = examen_aprobado or actividades_completas
+
+            if mundo_superado:
+                if i + 1 < len(mundos):
+                    mundo_calculado = mundos[i + 1]
+                else:
+                    mundo_calculado = mundo
+            else:
+                mundo_calculado = mundo
                 break
 
-        if progreso_usuario.mundo_actual_id != mundo_desbloqueado.id:
-            progreso_usuario.mundo_actual = mundo_desbloqueado
+        # Nunca retroceder: conservar el mundo más avanzado entre el calculado y el almacenado
+        if mundo_calculado.orden >= progreso_usuario.mundo_actual.orden:
+            mundo_final = mundo_calculado
+        else:
+            mundo_final = progreso_usuario.mundo_actual
+
+        if progreso_usuario.mundo_actual_id != mundo_final.id:
+            progreso_usuario.mundo_actual = mundo_final
             progreso_usuario.save()
 
         return progreso_usuario
+
