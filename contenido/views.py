@@ -45,12 +45,16 @@ def mapa_mundos(request):
             mundo.estado = 'bloqueado'
             mundo.prereq = Mundo.objects.filter(orden__lt=mundo.orden).order_by('-orden').first()
 
+    from contenido.models import InsigniaUsuario
+    insignias_count = InsigniaUsuario.objects.filter(usuario=usuario).count()
+
     context = {
         'mundos': mundos,
         'usuario': usuario,
         'progreso_usuario': progreso_usuario,
         'mundos_completados': mundos_completados,
         'total_mundos': total_mundos,
+        'insignias_count': insignias_count,
         'score': sum([p.puntaje for p in ProgresoActividad.objects.filter(usuario=usuario)])
     }
     return render(request, 'mapa_mundos.html', context)
@@ -141,16 +145,35 @@ def temario_mundo(request, mundo_id):
             act.url = ''
             act.tipo_display = act.tipo or 'Actividad'
     
-    actividades_bloqueadas = sum(1 for act in actividades if act.estado == 'bloqueado')
+    # Filtrar solo actividades públicas regulares
+    actividades_visibles = [act for act in actividades if (act.orden or 0) < 90]
+    total_visibles = len(actividades_visibles)
+    visibles_completadas = sum(1 for act in actividades_visibles if act.estado == 'completado')
+    actividades_bloqueadas = sum(1 for act in actividades_visibles if act.estado == 'bloqueado')
+    
+    # RN-39: El examen se habilita si todas las actividades evaluables del mundo están completadas
+    examen_habilitado = (total_visibles > 0 and visibles_completadas == total_visibles)
+    
+    from minijuegos.examen.models import IntentoExamen
+    from contenido.models import InsigniaUsuario
+    
+    ultimo_intento_examen = IntentoExamen.objects.filter(usuario=usuario, mundo=mundo).order_by('-fecha_creacion').first()
+    examen_aprobado = IntentoExamen.objects.filter(usuario=usuario, mundo=mundo, aprobado=True).exists()
+    insignias_count = InsigniaUsuario.objects.filter(usuario=usuario).count()
     
     context = {
         'mundo': mundo,
-        'actividades': actividades,
+        'actividades': actividades_visibles,
         'xp_maximo': xp_maximo,
         'xp_acumulado': xp_acumulado,
-        'total_actividades': total_actividades,
-        'actividades_completadas': actividades_completadas,
+        'total_actividades': total_visibles,
+        'actividades_completadas': visibles_completadas,
         'actividades_bloqueadas': actividades_bloqueadas,
+        'examen_habilitado': examen_habilitado,
+        'examen_aprobado': examen_aprobado,
+        'ultimo_intento_examen': ultimo_intento_examen,
+        'url_examen': reverse('examen:examen_inicio', kwargs={'mundo_id': mundo.id}),
+        'insignias_count': insignias_count,
         'usuario': usuario,
         'score': sum([p.puntaje for p in ProgresoActividad.objects.filter(usuario=usuario)])
     }

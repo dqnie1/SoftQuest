@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'TemarioStyle.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Sora:wght@700;800&display=swap" rel="stylesheet">
+    <title>Examen Bloqueado · SoftQuest</title>
+</head>
+<body style="display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #f8fafc; padding: 1.5rem;">
+    <div style="background: white; border-radius: 20px; border: 1px solid #e2e8f0; max-width: 520px; width: 100%; padding: 2.5rem; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
+        <div style="width: 72px; height: 72px; border-radius: 50%; background: #fef3c7; color: #d97706; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        </div>
+        <h2 style="font-family: var(--font-heading); font-size: 1.6rem; color: #1e293b; margin-bottom: 0.75rem;">Examen Bloqueado</h2>
+        <p style="color: #64748b; font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.75rem;">
+            El examen de {{ mundo.nombre }} se habilita únicamente cuando hayas completado todas las actividades previas de este mundo.
+        </p>
+        <a href="{{ url_temario }}" class="btn-primary" style="display: inline-block; width: 100%; text-decoration: none; padding: 0.9rem; text-align: center; font-weight: 700; border-radius: 12px;">
+            Ir al temario a completar actividades
+        </a>
+    </div>
+</body>
+</html>

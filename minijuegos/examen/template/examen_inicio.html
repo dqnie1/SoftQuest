@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'TemarioStyle.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Sora:wght@700;800&display=swap" rel="stylesheet">
+    <title>Examen Final · {{ mundo.nombre }}</title>
+    <style>
+        .examen-container {
+            max-width: 800px;
+            margin: 2.5rem auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+        .examen-header-hero {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            padding: 3rem 2.5rem;
+            color: white;
+            text-align: center;
+            position: relative;
+        }
+        .hero-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 0.35rem 1rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 0.75rem;
+        }
+        .hero-title {
+            font-family: var(--font-heading);
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+        .hero-subtitle {
+            font-size: 1rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+        .examen-body {
+            padding: 2.5rem;
+        }
+        .grid-detalles {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .detalle-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 1.25rem 1rem;
+            text-align: center;
+        }
+        .detalle-icono {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 0.75rem;
+            background: #ede9fe;
+            color: #6366f1;
+        }
+        .detalle-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #64748b;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.25rem;
+        }
+        .detalle-valor {
+            font-family: var(--font-heading);
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        .reglas-box {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 14px;
+            padding: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+        .reglas-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #166534;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .reglas-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 0.88rem;
+            color: #15803d;
+            line-height: 1.6;
+        }
+        .reglas-list li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .reglas-list li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+            color: #16a34a;
+        }
+        .btn-comenzar {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            border-radius: 12px;
+            background: #4f46e5;
+            color: white;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+        .btn-comenzar:hover {
+            background: #4338ca;
+            transform: translateY(-2px);
+        }
+        .btn-volver-link {
+            display: block;
+            text-align: center;
+            margin-top: 1rem;
+            color: #64748b;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .btn-volver-link:hover {
+            color: #1e293b;
+        }
+    </style>
+</head>
+<body style="display: block; height: auto; min-height: 100vh; overflow-y: auto;">
+    <div style="padding: 1.5rem;">
+        <div class="examen-container">
+            <div class="examen-header-hero">
+                <span class="hero-badge">Evaluación Final</span>
+                <h1 class="hero-title">Examen Final: {{ mundo.nombre }}</h1>
+                <p class="hero-subtitle">
+                    Evalúa tus conocimientos de todos los temarios del mundo. Organizado en bloques que combinan trivias y ejercicios de relación.
+                </p>
+            </div>
+
+            <div class="examen-body">
+                <div class="grid-detalles">
+                    <div class="detalle-card">
+                        <div class="detalle-icono">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                        </div>
+                        <div class="detalle-label">Bloques</div>
+                        <div class="detalle-valor">{{ total_bloques }}</div>
+                    </div>
+
+                    <div class="detalle-card">
+                        <div class="detalle-icono" style="background:#fee2e2; color:#ef4444;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        </div>
+                        <div class="detalle-label">Tiempo Límite</div>
+                        <div class="detalle-valor">{{ tiempo_minutos }}:00</div>
+                    </div>
+
+                    <div class="detalle-card">
+                        <div class="detalle-icono" style="background:#dcfce7; color:#16a34a;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+                        </div>
+                        <div class="detalle-label">Mínimo Aprobatorio</div>
+                        <div class="detalle-valor">{{ minimo_aprobatorio }}%</div>
+                    </div>
+                </div>
+
+                <div class="reglas-box">
+                    <div class="reglas-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                        Instrucciones y Reglas de Evaluación
+                    </div>
+                    <ul class="reglas-list">
+                        <li><strong>Estructura:</strong> Un bloque por cada temario del mundo. Cada bloque contiene preguntas tipo trivia y un ejercicio de relacionar conceptos con sus definiciones.</li>
+                        <li><strong>Cierre de bloque:</strong> Al finalizar un bloque, este se cerrará y ya no podrás regresar a modificar sus respuestas.</li>
+                        <li><strong>Cronómetro global:</strong> Tienes {{ tiempo_minutos }} minutos para todo el examen. Si llega a cero, el examen finaliza automáticamente y los reactivos no respondidos se considerarán incorrectos.</li>
+                        <li><strong>Retroalimentación:</strong> Las respuestas correctas y explicaciones se revelarán al finalizar el examen completo.</li>
+                        <li><strong>Aprobación:</strong> Con 70% o más aprobarás el examen y desbloquearás el siguiente mundo. El examen no otorga puntos de experiencia (XP).</li>
+                    </ul>
+                </div>
+
+                <a href="{{ url_comenzar }}" class="btn-comenzar" id="btnComenzarExamen">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    Comenzar examen
+                </a>
+
+                <a href="{{ url_temario }}" class="btn-volver-link">
+                    &larr; Regresar al temario
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

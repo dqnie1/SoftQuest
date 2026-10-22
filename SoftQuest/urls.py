@@ -18,6 +18,7 @@ urlpatterns = [
     path('nave/', include('minijuegos.nave.urls')), #url de minijuego nave espacial
     path('snake/', include('minijuegos.snake.urls')), #url de minijuego snake
     path('cubecode/', include('minijuegos.cubecode.urls')),
+    path('examen/', include('minijuegos.examen.urls')), # url de examen CU-04
 ]
 
 # Servir archivos estaticos durante el desarrollo.

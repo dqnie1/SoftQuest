@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'minijuegos.nave',
     'minijuegos.snake',
     'minijuegos.cubecode',
+    'minijuegos.examen',
     'contenido', # exploracion de mundos y temarios
     'login',
 ]
@@ -95,6 +96,7 @@ TEMPLATES = [
             BASE_DIR / 'minijuegos' / 'trivia' / 'template',
             BASE_DIR / 'minijuegos' / 'match' / 'template',
             BASE_DIR / 'minijuegos' / 'pacman' / 'templates',
+            BASE_DIR / 'minijuegos' / 'examen' / 'template',
         ],
         'APP_DIRS': True,
         'OPTIONS': {

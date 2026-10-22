@@ -90,3 +90,41 @@ class ProgresoUsuario(models.Model):
 
     def __str__(self):
         return f"{self.usuario} - {self.mundo_actual}"
+
+
+# ---------------------------------------------------------------------------
+# Insignias de Mundos (RN-49)
+# ---------------------------------------------------------------------------
+
+class Insignia(models.Model):
+    id = models.AutoField(primary_key=True)
+    mundo = models.OneToOneField(
+        Mundo, on_delete=models.CASCADE, related_name="insignia"
+    )
+    nombre = models.CharField(max_length=100)
+    descripcion = models.CharField(max_length=255, blank=True)
+    icono = models.CharField(max_length=50, default="award")
+
+    class Meta:
+        db_table = "insignia"
+
+    def __str__(self):
+        return f"Insignia: {self.nombre} ({self.mundo.nombre})"
+
+
+class InsigniaUsuario(models.Model):
+    id = models.AutoField(primary_key=True)
+    usuario = models.ForeignKey(
+        Usuario, on_delete=models.CASCADE, related_name="insignias_obtenidas"
+    )
+    insignia = models.ForeignKey(
+        Insignia, on_delete=models.CASCADE, related_name="usuarios_ganadores"
+    )
+    fecha_obtencion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "insignia_usuario"
+        unique_together = ('usuario', 'insignia')
+
+    def __str__(self):
+        return f"{self.usuario.nombre} - {self.insignia.nombre}"
