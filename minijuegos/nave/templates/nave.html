@@ -65,6 +65,12 @@
 
         .sq-card { background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 14px rgba(15, 23, 42, 0.04); }
         .sq-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #64748b; }
+
+        /* Toast de feedback de partida */
+        @keyframes toastIn  { from { opacity:0; transform:translateY(-10px) scale(0.94); } to { opacity:1; transform:translateY(0) scale(1); } }
+        @keyframes toastOut { from { opacity:1; transform:translateY(0) scale(1); } to { opacity:0; transform:translateY(-8px) scale(0.94); } }
+        .toast-in  { animation: toastIn  0.18s ease forwards; }
+        .toast-out { animation: toastOut 0.18s ease forwards; }
     </style>
 </head>
 <body class="bg-sq-bg text-sq-ink font-sans h-screen w-screen flex flex-col">
@@ -217,8 +223,8 @@
         <!-- Game Canvas -->
         <canvas id="gameCanvas" class="absolute inset-0 w-full h-full block cursor-crosshair"></canvas>
 
-        <!-- Pedagogical Live Log Overlay -->
-        <div id="pedagogical-feed" class="absolute top-4 left-4 max-w-sm w-full pointer-events-none z-10 flex flex-col gap-2"></div>
+        <!-- Toast de feedback (top-center, auto-dismiss) -->
+        <div id="toast-container" class="absolute top-4 left-0 right-0 flex justify-center z-20 pointer-events-none px-4"></div>
 
         <!-- Weapon Control Dock (Bottom Center) -->
         <div class="absolute bottom-4 z-20 flex flex-col items-center gap-2">
@@ -1072,20 +1078,44 @@
             }
         }
 
+        // ── Toast de feedback ────────────────────────────────────────────────
+        // Un solo toast centrado en la parte superior, dura 2.5 s y desaparece.
+        // No ocupa espacio permanente ni bloquea la vista del jugador.
+        let _toastTimer = null;
+        let _toastEl    = null;
+
         function pushFeed(isSuccess, message) {
-            const feed = document.getElementById('pedagogical-feed');
-            const entry = document.createElement('div');
-            entry.className = `p-2.5 rounded-xl text-xs font-semibold border backdrop-blur-md shadow-md transition-all transform duration-300 ${
-                isSuccess 
-                ? 'bg-emerald-50/95 border-emerald-200 text-emerald-700' 
-                : 'bg-rose-50/95 border-rose-200 text-rose-700'
-            }`;
-            entry.innerHTML = `<i class="fa-solid ${isSuccess ? 'fa-circle-check' : 'fa-triangle-exclamation'} mr-1.5"></i> ${message}`;
-            
-            feed.prepend(entry);
-            if (feed.children.length > 3) {
-                feed.removeChild(feed.lastChild);
-            }
+            const container = document.getElementById('toast-container');
+
+            // Descartar toast anterior inmediatamente
+            if (_toastEl) { _toastEl.remove(); _toastEl = null; }
+            if (_toastTimer) { clearTimeout(_toastTimer); _toastTimer = null; }
+
+            // Truncar mensaje a 100 caracteres para mantenerlo compacto
+            const MAX = 100;
+            const short = message.length > MAX ? message.slice(0, MAX) + '…' : message;
+
+            const toast = document.createElement('div');
+            toast.className = [
+                'toast-in',
+                'inline-flex items-center gap-2',
+                'px-4 py-2 rounded-full text-xs font-bold shadow-lg border',
+                isSuccess
+                    ? 'bg-emerald-500 border-emerald-400 text-white'
+                    : 'bg-rose-500   border-rose-400   text-white'
+            ].join(' ');
+            toast.innerHTML = `<i class="fa-solid ${isSuccess ? 'fa-circle-check' : 'fa-triangle-exclamation'} flex-shrink-0"></i><span>${short}</span>`;
+
+            container.appendChild(toast);
+            _toastEl = toast;
+
+            // Auto-dismiss a los 2.5 s
+            _toastTimer = setTimeout(() => {
+                if (_toastEl !== toast) return;
+                toast.classList.replace('toast-in', 'toast-out');
+                setTimeout(() => { toast.remove(); _toastEl = null; }, 200);
+                _toastTimer = null;
+            }, 2500);
         }
     </script>
 </body>
