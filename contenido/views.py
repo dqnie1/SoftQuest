@@ -119,6 +119,24 @@ def temario_mundo(request, mundo_id):
             except Exception:
                 act.url = f'/pacman/{act.id}/'
             act.tipo_display = 'Pacman'
+        elif tipo_normalizado in ('nave', 'nave_espacial'):
+            try:
+                act.url = reverse('nave:jugar', kwargs={'actividad_id': act.id})
+            except Exception:
+                act.url = f'/nave/{act.id}/'
+            act.tipo_display = 'Nave Espacial'
+        elif tipo_normalizado == 'snake':
+            try:
+                act.url = reverse('snake:jugar', kwargs={'actividad_id': act.id})
+            except Exception:
+                act.url = f'/snake/{act.id}/'
+            act.tipo_display = 'Snake'
+        elif tipo_normalizado in ('cubecode', 'cube_code'):
+            try:
+                act.url = reverse('cubecode:jugar', kwargs={'actividad_id': act.id})
+            except Exception:
+                act.url = f'/cubecode/{act.id}/'
+            act.tipo_display = 'CubeCode'
         else:
             act.url = ''
             act.tipo_display = act.tipo or 'Actividad'

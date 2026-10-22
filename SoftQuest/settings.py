@@ -43,7 +43,7 @@ SECRET_KEY = 'django-insecure-bxw7rg@b5^3r!e3y%cb#^!6nfwhta)u38dfu*dj6sz^fvt88@9
 DEBUG = True
 
 # aqui ponemos quien es el host
-ALLOWED_HOSTS = ['.vercel.app', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['.vercel.app', 'localhost', '127.0.0.1', 'testserver']
 
 
 
@@ -62,6 +62,9 @@ INSTALLED_APPS = [
     'minijuegos.trivia',
     'minijuegos.match',
     'minijuegos.pacman',
+    'minijuegos.nave',
+    'minijuegos.snake',
+    'minijuegos.cubecode',
     'contenido', # exploracion de mundos y temarios
     'login',
 ]
@@ -178,6 +181,8 @@ STATICFILES_DIRS = [
     BASE_DIR / 'minijuegos' / 'match' / 'template' / 'style',
     BASE_DIR / 'minijuegos' / 'trivia' / 'template' / 'style',
     BASE_DIR / 'minijuegos' / 'pacman' / 'templates' / 'style',
+    BASE_DIR / 'minijuegos' / 'snake' / 'templates' / 'style',
+    BASE_DIR / 'minijuegos' / 'cubecode' / 'static',
 ]
 
 
@@ -196,3 +201,6 @@ MAILERS = {
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'mapa_mundos'
 LOGOUT_REDIRECT_URL = 'login'
+
+# Optimización de sesiones: caché en memoria + base de datos para eliminar latencia de red
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'

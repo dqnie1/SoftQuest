@@ -1,0 +1,1122 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SoftQuest · {{ actividad.titulo }}</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Plus Jakarta Sans -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        sq: {
+                            indigo:     '#5b5bf0',  // RF
+                            indigoSoft: '#eceffd',
+                            indigoDark: '#3730a3',
+                            teal:       '#0cc08b',  // RNF
+                            amber:      '#ffb400',  // RN
+                            amberDark:  '#d97706',
+                            cream:      '#fff8e1',
+                            creamLine:  '#fde9a8',
+                            boss:       '#8b5cf6',  // Anomalía ambigua
+                            bg:         '#eff3f9',
+                            ink:        '#1e293b',
+                            muted:      '#64748b',
+                            line:       '#e2e8f0'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        html, body { height: 100%; margin: 0; }
+        body { height: 100dvh; }
+        canvas { touch-action: none; }
+        body {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow: hidden;
+            background-color: #eff3f9;
+            font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
+        }
+
+        .neon-border-rf  { border-color: #5b5bf0 !important; background: #eceffd !important; box-shadow: 0 0 0 3px rgba(91, 91, 240, 0.18); }
+        .neon-border-rnf { border-color: #0cc08b !important; background: #e6f9f3 !important; box-shadow: 0 0 0 3px rgba(12, 192, 139, 0.20); }
+        .neon-border-rn  { border-color: #ffb400 !important; background: #fff8e1 !important; box-shadow: 0 0 0 3px rgba(255, 180, 0, 0.25); }
+
+        .weapon-btn { transition: all 0.15s ease; }
+        .weapon-btn:hover { transform: translateY(-1px); }
+        .weapon-btn.active { transform: scale(1.05); }
+
+        .sq-card { background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 14px rgba(15, 23, 42, 0.04); }
+        .sq-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #64748b; }
+
+        /* Toast de feedback de partida */
+        @keyframes toastIn  { from { opacity:0; transform:translateY(-10px) scale(0.94); } to { opacity:1; transform:translateY(0) scale(1); } }
+        @keyframes toastOut { from { opacity:1; transform:translateY(0) scale(1); } to { opacity:0; transform:translateY(-8px) scale(0.94); } }
+        .toast-in  { animation: toastIn  0.18s ease forwards; }
+        .toast-out { animation: toastOut 0.18s ease forwards; }
+    </style>
+</head>
+<body class="bg-sq-bg text-sq-ink font-sans h-screen w-screen flex flex-col">
+    {% csrf_token %}
+
+    <script>
+        // Web Audio API Synthesizer para SFX estilo arcade
+        class CyberAudio {
+            constructor() {
+                this.ctx = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContextClass) {
+                        this.ctx = new AudioContextClass();
+                    }
+                }
+            }
+
+            playLaser(freq = 600, type = 'sawtooth', duration = 0.12) {
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + duration);
+                    gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch(e){}
+            }
+
+            playExplosion() {
+                if (!this.ctx) return;
+                try {
+                    const bufferSize = this.ctx.sampleRate * 0.25;
+                    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        data[i] = Math.random() * 2 - 1;
+                    }
+                    const noise = this.ctx.createBufferSource();
+                    noise.buffer = buffer;
+                    const filter = this.ctx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(800, this.ctx.currentTime);
+                    filter.frequency.exponentialRampToValueAtTime(50, this.ctx.currentTime + 0.25);
+                    const gain = this.ctx.createGain();
+                    gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                    noise.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    noise.start();
+                } catch(e){}
+            }
+
+            playGlitch() {
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                    osc.frequency.setValueAtTime(80, this.ctx.currentTime + 0.08);
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.2);
+                } catch(e){}
+            }
+
+            playEmp() {
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.4);
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.4);
+                } catch(e){}
+            }
+        }
+
+        const audio = new CyberAudio();
+    </script>
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-white border-b border-sq-line px-4 sm:px-6 py-2.5 z-30 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <a href="{{ url_temario }}" title="Regresar al temario" class="text-sq-muted hover:text-sq-indigo transition p-1 rounded-lg hover:bg-slate-100">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <div class="text-xl font-extrabold text-sq-indigo flex items-center gap-2">
+                <i class="fa-solid fa-shuttle-space"></i>
+                SoftQuest
+            </div>
+            <span class="hidden md:inline-block text-sm font-semibold text-sq-muted border-l border-sq-line pl-3">
+                {{ actividad.titulo }}
+            </span>
+        </div>
+
+        <!-- Gameplay HUD Indicators -->
+        <div class="flex items-center gap-3 sm:gap-6">
+            <!-- Escudo -->
+            <div class="flex items-center gap-3 min-w-[150px] sm:min-w-[220px]">
+                <span class="sq-label hidden sm:block">Escudo</span>
+                <div class="flex-1 bg-slate-200 h-2 rounded-full overflow-hidden">
+                    <div id="shield-bar" class="h-full bg-sq-teal rounded-full transition-all duration-300" style="width: {{ estado.escudo }}%;"></div>
+                </div>
+                <span id="shield-txt" class="text-[11px] font-bold text-white bg-sq-teal rounded-full px-2.5 py-0.5">{{ estado.escudo }}%</span>
+            </div>
+
+            <!-- Score -->
+            <div class="text-center bg-sq-cream border border-sq-creamLine rounded-xl px-4 py-1">
+                <span class="text-[9px] font-bold text-sq-amber tracking-widest block">SCORE</span>
+                <span id="score-val" class="text-lg font-extrabold text-sq-amberDark leading-tight">000000</span>
+            </div>
+
+            <!-- Combo -->
+            <div class="text-center bg-sq-indigoSoft rounded-xl px-3 py-1">
+                <span class="text-[9px] font-bold text-sq-indigoDark tracking-widest block">COMBO</span>
+                <span id="combo-val" class="text-base font-extrabold text-sq-indigoDark leading-tight">x{{ estado.combo }}</span>
+            </div>
+
+            <!-- Fullscreen toggle -->
+            <button onclick="toggleFullscreen()" title="Pantalla completa (F)" class="w-9 h-9 flex items-center justify-center rounded-lg border border-sq-line bg-white text-sq-muted hover:text-sq-indigo hover:border-sq-indigo/50 transition">
+                <i id="fs-icon" class="fa-solid fa-expand"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Game Workspace -->
+    <main class="relative flex-1 w-full h-full flex flex-col items-center justify-center overflow-hidden">
+
+        <!-- Game Canvas -->
+        <canvas id="gameCanvas" class="absolute inset-0 w-full h-full block cursor-crosshair"></canvas>
+
+        <!-- Toast de feedback (top-center, auto-dismiss) -->
+        <div id="toast-container" class="absolute top-4 left-0 right-0 flex justify-center z-20 pointer-events-none px-4"></div>
+
+        <!-- Weapon Control Dock (Bottom Center) -->
+        <div class="absolute bottom-4 z-20 flex flex-col items-center gap-2">
+            <!-- Key hints -->
+            <div class="text-[10px] font-semibold text-sq-muted hidden sm:flex items-center gap-3 bg-white/90 backdrop-blur px-3 py-1 rounded-full border border-sq-line shadow-sm">
+                <span>[WASD / Flechas / Mouse] Mover</span> &bull;
+                <span>[F] Pantalla completa</span> &bull;
+                <span>[1] Láser RF</span> &bull;
+                <span>[2] Láser RNF</span> &bull;
+                <span>[3] Láser RN</span> &bull;
+                <span>[ESPACIO / CLIC] Disparar</span>
+            </div>
+
+            <!-- Weapons Dock Buttons -->
+            <div class="sq-card flex items-center gap-2 p-2 rounded-2xl">
+                <!-- RF Weapon Button -->
+                <button id="btn-weapon-rf" onclick="setWeapon('RF')" class="weapon-btn active neon-border-rf flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-sq-line bg-white text-sq-indigoDark text-xs font-bold">
+                    <span class="w-3 h-3 rounded-full bg-sq-indigo"></span>
+                    <span>RF (Funcional)</span>
+                    <span class="text-[9px] font-semibold text-sq-muted bg-slate-100 px-1.5 py-0.5 rounded">1</span>
+                </button>
+
+                <!-- RNF Weapon Button -->
+                <button id="btn-weapon-rnf" onclick="setWeapon('RNF')" class="weapon-btn flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-sq-line bg-white text-emerald-700 text-xs font-bold">
+                    <span class="w-3 h-3 rounded-full bg-sq-teal"></span>
+                    <span>RNF (No Funcional)</span>
+                    <span class="text-[9px] font-semibold text-sq-muted bg-slate-100 px-1.5 py-0.5 rounded">2</span>
+                </button>
+
+                <!-- RN Weapon Button -->
+                <button id="btn-weapon-rn" onclick="setWeapon('RN')" class="weapon-btn flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-sq-line bg-white text-sq-amberDark text-xs font-bold">
+                    <span class="w-3 h-3 rounded-full bg-sq-amber"></span>
+                    <span>RN (Regla Negocio)</span>
+                    <span class="text-[9px] font-semibold text-sq-muted bg-slate-100 px-1.5 py-0.5 rounded">3</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- START SCREEN OVERLAY -->
+        <div id="start-overlay" class="absolute inset-0 bg-sq-bg/95 backdrop-blur-sm z-40 flex flex-col items-center justify-center p-6 text-center">
+            <div class="sq-card max-w-xl w-full rounded-2xl overflow-hidden text-left">
+                <!-- Banner de mundo -->
+                <div class="bg-sq-amber px-6 py-5 text-left flex items-center gap-4">
+                    <div class="w-12 h-12 bg-white/25 rounded-xl flex items-center justify-center text-white text-2xl">
+                        <i class="fa-solid fa-shuttle-space"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl sm:text-2xl font-extrabold text-white leading-tight">
+                            Requirements Cyber-Defense
+                        </h1>
+                        <p class="text-xs text-amber-100 font-semibold mt-0.5">Hack the Backlog · CU-06</p>
+                    </div>
+                </div>
+
+                <div class="p-6 sm:p-8">
+                    <p class="text-sm text-sq-muted mb-6 leading-relaxed">
+                        Defiende la infraestructura de los requisitos defectuosos. Selecciona el láser correspondiente al requerimiento entrante antes de que colisione con el servidor central. Todos los requerimientos lucen neutrales: tendrás que leer atentamente cada uno para clasificarlo. Muévete libremente por la pantalla y esquiva colisiones directas.
+                    </p>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6 text-xs">
+                        <div class="p-3 bg-sq-indigoSoft border border-sq-indigo/20 rounded-xl">
+                            <span class="text-sq-indigoDark font-bold block mb-1">Láser Índigo (RF)</span>
+                            <p class="text-[11px] text-sq-muted">Para acciones, servicios y procesos directos del sistema.</p>
+                        </div>
+                        <div class="p-3 bg-emerald-50 border border-sq-teal/30 rounded-xl">
+                            <span class="text-emerald-700 font-bold block mb-1">Láser Verde (RNF)</span>
+                            <p class="text-[11px] text-sq-muted">Para restricciones de calidad, rendimiento y seguridad.</p>
+                        </div>
+                        <div class="p-3 bg-sq-cream border border-sq-creamLine rounded-xl">
+                            <span class="text-sq-amberDark font-bold block mb-1">Láser Ámbar (RN)</span>
+                            <p class="text-[11px] text-sq-muted">Para políticas organizacionales y normativas del negocio.</p>
+                        </div>
+                    </div>
+
+                    <button onclick="startGame()" class="w-full py-3.5 bg-sq-indigo hover:bg-indigo-600 text-white font-bold text-base rounded-xl shadow-md hover:shadow-lg active:scale-[0.98] transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-play"></i> Iniciar secuencia de defensa
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- AMBIGUITY HACK MINIBOSS MODAL -->
+        <div id="ambiguity-modal" class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4">
+            <div class="sq-card max-w-lg w-full rounded-2xl overflow-hidden">
+                <div class="bg-sq-boss px-5 py-4 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-triangle-exclamation text-white text-xl animate-bounce"></i>
+                        <h3 class="font-extrabold text-base sm:text-lg text-white">Anomalía: requerimiento ambiguo</h3>
+                    </div>
+                    <div id="boss-timer" class="text-xl font-extrabold text-white bg-white/20 rounded-lg px-2.5 py-0.5">5.0s</div>
+                </div>
+
+                <div class="p-5">
+                    <div class="bg-violet-50 border border-violet-200 rounded-xl p-4 mb-4">
+                        <span class="sq-label !text-violet-600 block mb-1">Línea vaga detectada</span>
+                        <p id="boss-vague-text" class="text-sm text-sq-ink italic font-medium"></p>
+                    </div>
+
+                    <p class="text-xs text-sq-muted mb-3 font-semibold">Selecciona la métrica cuantitativa para desintegrar la anomalía:</p>
+
+                    <div id="boss-options" class="space-y-2 text-xs"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GAME OVER / REPORT OVERLAY -->
+        <div id="gameover-overlay" class="absolute inset-0 bg-sq-bg/95 backdrop-blur-sm z-40 hidden flex items-center justify-center p-6">
+            <div class="sq-card max-w-xl w-full rounded-2xl overflow-hidden text-center">
+                <div class="bg-sq-amber px-6 py-5 text-left flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl sm:text-2xl font-extrabold text-white">Reporte de auditoría terminado</h2>
+                        <p class="text-xs text-amber-100 font-semibold mt-0.5">El escudo de la nave colapsó</p>
+                    </div>
+                    <div id="badge-xp-container" class="bg-white/20 backdrop-blur px-3 py-1.5 rounded-xl text-white text-right">
+                        <span class="text-[9px] uppercase tracking-wider block font-bold">XP Ganado</span>
+                        <span id="final-xp" class="text-lg font-black leading-none">0 XP</span>
+                    </div>
+                </div>
+
+                <div class="p-6 sm:p-8">
+                    <!-- Unlock Alert Banner -->
+                    <div id="unlock-banner" class="hidden mb-6 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-left flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-base">
+                            <i class="fa-solid fa-lock-open"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-emerald-800">¡Siguiente actividad desbloqueada!</p>
+                            <p class="text-[11px] text-emerald-600">Alcanzaste más de 70 XP en tu auditoría.</p>
+                        </div>
+                    </div>
+
+                    <!-- Final Metrics Grid -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 text-left">
+                        <div class="bg-sq-cream border border-sq-creamLine p-3 rounded-xl">
+                            <span class="text-[9px] font-bold text-sq-amber tracking-widest block">SCORE</span>
+                            <span id="final-score" class="text-xl font-extrabold text-sq-amberDark">0</span>
+                        </div>
+                        <div class="bg-sq-indigoSoft p-3 rounded-xl">
+                            <span class="text-[9px] font-bold text-sq-indigoDark tracking-widest block">PRECISIÓN RF</span>
+                            <span id="final-rf" class="text-xl font-extrabold text-sq-indigoDark">0%</span>
+                        </div>
+                        <div class="bg-emerald-50 border border-sq-teal/20 p-3 rounded-xl">
+                            <span class="text-[9px] font-bold text-emerald-700 tracking-widest block">PRECISIÓN RNF</span>
+                            <span id="final-rnf" class="text-xl font-extrabold text-sq-teal">0%</span>
+                        </div>
+                        <div class="bg-sq-cream border border-sq-creamLine p-3 rounded-xl">
+                            <span class="text-[9px] font-bold text-sq-amber tracking-widest block">PRECISIÓN RN</span>
+                            <span id="final-rn" class="text-xl font-extrabold text-sq-amberDark">0%</span>
+                        </div>
+                    </div>
+
+                    <!-- Precision Global Card -->
+                    <div class="bg-slate-50 border border-sq-line rounded-xl p-3 mb-6 text-left flex items-center justify-between">
+                        <div>
+                            <span class="text-[10px] font-bold text-sq-muted uppercase tracking-wider block">Precisión Global de Clasificación</span>
+                            <span class="text-xs text-slate-500">Excluye anomalías según reglas pedagógicas</span>
+                        </div>
+                        <span id="final-precision-global" class="text-2xl font-black text-sq-indigoDark">0%</span>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <button onclick="restartGame()" class="flex-1 py-3.5 bg-sq-indigo hover:bg-indigo-600 text-white font-bold text-sm rounded-xl shadow-md hover:shadow-lg active:scale-[0.98] transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-rotate-right"></i> Reintentar defensa
+                        </button>
+                        <a href="{{ url_temario }}" class="flex-1 py-3.5 bg-white border border-sq-line hover:bg-slate-50 text-sq-ink font-bold text-sm rounded-xl transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-arrow-left"></i> Regresar al temario
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // Bancos de requerimientos y anomalías entregados por el servidor
+        // NOTA DE SEGURIDAD: NO contienen tipo_correcto, es_correcta ni explicaciones.
+        const REQUIREMENT_BANK = {{ requerimientos_json|safe }};
+        const AMBIGUOUS_BOSSES = {{ anomalias_json|safe }};
+        const ACTIVIDAD_ID = {{ actividad.id }};
+        const URL_TEMARIO = "{{ url_temario }}";
+
+        // Obtención de token CSRF para peticiones fetch
+        function getCsrfToken() {
+            const tokenInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+            if (tokenInput) return tokenInput.value;
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, 10) === 'csrftoken=') {
+                        cookieValue = decodeURIComponent(cookie.substring(10));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Configuración de Canvas
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        new ResizeObserver(resizeCanvas).observe(canvas);
+        resizeCanvas();
+
+        function requestFs() {
+            const el = document.documentElement;
+            try {
+                const p = (el.requestFullscreen || el.webkitRequestFullscreen || function(){}).call(el);
+                if (p && p.catch) p.catch(() => {});
+            } catch (err) {}
+        }
+        function toggleFullscreen() {
+            if (document.fullscreenElement || document.webkitFullscreenElement) {
+                (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+            } else {
+                requestFs();
+            }
+        }
+        document.addEventListener('fullscreenchange', () => {
+            const on = !!document.fullscreenElement;
+            const icon = document.getElementById('fs-icon');
+            if (icon) icon.className = on ? 'fa-solid fa-compress' : 'fa-solid fa-expand';
+            setTimeout(resizeCanvas, 50);
+        });
+
+        // Estado del Juego en Cliente (sincronizado con el Servidor)
+        let isGameRunning = false;
+        let selectedWeapon = 'RF'; // RF, RNF, RN
+        let serverState = {
+            escudo: {{ estado.escudo }},
+            combo: {{ estado.combo }},
+            puntaje: {{ estado.puntaje }},
+            aciertos_rf: {{ estado.aciertos_rf }},
+            aciertos_rnf: {{ estado.aciertos_rnf }},
+            aciertos_rn: {{ estado.aciertos_rn }},
+            partida_terminada: {{ estado.partida_terminada|yesno:"true,false" }}
+        };
+
+        // Contador de apariciones generado por cliente para cálculo de precisión en el servidor
+        let requerimientosGenerados = {};
+
+        let lastSpawn = 0;
+        let bossTimerInterval = null;
+
+        // Objeto Jugador (Nave)
+        const player = {
+            x: 100,
+            y: 200,
+            size: 24,
+            speed: 7,
+            tx: 100,
+            ty: 200
+        };
+
+        // Entidades visuales
+        let lasers = [];
+        let enemies = [];
+        let particles = [];
+
+        // Controles por teclado
+        const keys = {};
+        window.addEventListener('keydown', e => {
+            keys[e.code] = true;
+            if (e.code === 'Digit1') setWeapon('RF');
+            if (e.code === 'Digit2') setWeapon('RNF');
+            if (e.code === 'Digit3') setWeapon('RN');
+            if (e.code === 'Space') { e.preventDefault(); fireLaser(); }
+            if (e.code === 'KeyF') toggleFullscreen();
+        });
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        // Control por puntero táctil / ratón
+        function aimAt(e) {
+            const rect = canvas.getBoundingClientRect();
+            player.tx = e.clientX - rect.left;
+            player.ty = e.clientY - rect.top;
+        }
+        canvas.addEventListener('pointermove', aimAt);
+        canvas.addEventListener('pointerdown', e => { aimAt(e); fireLaser(); });
+
+        function setWeapon(type) {
+            audio.init();
+            selectedWeapon = type;
+            document.querySelectorAll('.weapon-btn').forEach(btn => {
+                btn.classList.remove('active', 'neon-border-rf', 'neon-border-rnf', 'neon-border-rn');
+            });
+
+            const activeBtn = document.getElementById(`btn-weapon-${type.toLowerCase()}`);
+            if (activeBtn) {
+                activeBtn.classList.add('active', `neon-border-${type.toLowerCase()}`);
+            }
+            audio.playLaser(800, 'sine', 0.05);
+        }
+
+        function fireLaser() {
+            if (!isGameRunning || serverState.partida_terminada) return;
+            audio.init();
+
+            let color = '#5b5bf0';
+            if (selectedWeapon === 'RNF') color = '#0cc08b';
+            if (selectedWeapon === 'RN') color = '#ffb400';
+
+            lasers.push({
+                x: player.x + player.size,
+                y: player.y,
+                vx: 14,
+                type: selectedWeapon,
+                color: color
+            });
+
+            audio.playLaser(440, 'sawtooth', 0.1);
+        }
+
+        // Inicio de Partida
+        function startGame() {
+            audio.init();
+            document.getElementById('start-overlay').classList.add('hidden');
+            document.getElementById('gameover-overlay').classList.add('hidden');
+
+            lasers = [];
+            enemies = [];
+            particles = [];
+            requerimientosGenerados = {};
+            resizeCanvas();
+
+            player.x = player.tx = canvas.width * 0.15;
+            player.y = player.ty = canvas.height / 2;
+
+            updateHUD();
+            isGameRunning = true;
+            lastSpawn = performance.now();
+            requestAnimationFrame(gameLoop);
+        }
+
+        async function restartGame() {
+            try {
+                const res = await fetch(`/nave/${ACTIVIDAD_ID}/iniciar/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+                const data = await res.json();
+                if (data.ok && data.estado) {
+                    serverState = data.estado;
+                }
+            } catch (err) {
+                console.error("Error al reiniciar en servidor:", err);
+            }
+            startGame();
+        }
+
+        function updateHUD() {
+            const escudo = Math.max(0, serverState.escudo);
+            const shieldTxt = document.getElementById('shield-txt');
+            const shieldBar = document.getElementById('shield-bar');
+
+            shieldTxt.innerText = `${escudo}%`;
+            shieldBar.style.width = `${escudo}%`;
+
+            if (escudo <= 20) {
+                shieldTxt.className = 'text-[11px] font-bold text-white bg-rose-500 rounded-full px-2.5 py-0.5';
+                shieldBar.className = 'h-full bg-rose-500 rounded-full transition-all duration-300';
+            } else if (escudo <= 50) {
+                shieldTxt.className = 'text-[11px] font-bold text-white bg-amber-500 rounded-full px-2.5 py-0.5';
+                shieldBar.className = 'h-full bg-amber-500 rounded-full transition-all duration-300';
+            } else {
+                shieldTxt.className = 'text-[11px] font-bold text-white bg-sq-teal rounded-full px-2.5 py-0.5';
+                shieldBar.className = 'h-full bg-sq-teal rounded-full transition-all duration-300';
+            }
+
+            document.getElementById('score-val').innerText = String(serverState.puntaje).padStart(6, '0');
+            document.getElementById('combo-val').innerText = `x${serverState.combo}`;
+        }
+
+        // Bucle Principal de Juego
+        function gameLoop(timestamp) {
+            if (!isGameRunning) return;
+
+            // Limpieza del Canvas
+            ctx.fillStyle = '#eff3f9';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Cuadrícula cyberpunk de fondo
+            drawCyberGrid();
+
+            // Física de la nave del jugador
+            let kx = 0, ky = 0;
+            if (keys['KeyW'] || keys['ArrowUp']) ky -= 1;
+            if (keys['KeyS'] || keys['ArrowDown']) ky += 1;
+            if (keys['KeyA'] || keys['ArrowLeft']) kx -= 1;
+            if (keys['KeyD'] || keys['ArrowRight']) kx += 1;
+            if (kx || ky) {
+                const len = Math.hypot(kx, ky);
+                player.x += (kx / len) * player.speed;
+                player.y += (ky / len) * player.speed;
+                player.tx = player.x; player.ty = player.y;
+            } else {
+                player.x += (player.tx - player.x) * 0.18;
+                player.y += (player.ty - player.y) * 0.18;
+            }
+            player.x = Math.max(player.size, Math.min(canvas.width - player.size, player.x));
+            player.y = Math.max(player.size, Math.min(canvas.height - player.size, player.y));
+
+            // Renderizado de la nave
+            drawPlayer();
+
+            // Generación de enemigos según temporizador
+            if (timestamp - lastSpawn > 2600) {
+                spawnEnemy();
+                lastSpawn = timestamp;
+            }
+
+            // Actualización y renderizado de láseres
+            for (let i = lasers.length - 1; i >= 0; i--) {
+                const l = lasers[i];
+                l.x += l.vx;
+
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = l.color;
+                ctx.fillStyle = l.color;
+                ctx.fillRect(l.x, l.y - 3, 18, 6);
+                ctx.shadowBlur = 0;
+
+                if (l.x > canvas.width) {
+                    lasers.splice(i, 1);
+                }
+            }
+
+            // Actualización y renderizado de enemigos
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const e = enemies[i];
+                e.x -= e.speed;
+
+                drawEnemyNode(e);
+
+                // Colisión física con la nave
+                if (Math.abs(player.x - e.x) < e.width / 2 + player.size * 0.6 &&
+                    Math.abs(player.y - e.y) < e.height / 2 + player.size * 0.6) {
+                    
+                    audio.playGlitch();
+                    createParticles(player.x, player.y, '#ef4444');
+                    enemies.splice(i, 1);
+                    pushFeed(false, `Colisión física de la nave con requerimiento sin clasificar.`);
+                    
+                    // Notificar penalización al servidor
+                    notificarPenalizacion('impacto_nave');
+                    continue;
+                }
+
+                // Detección de colisión geométrica con láseres
+                for (let j = lasers.length - 1; j >= 0; j--) {
+                    const l = lasers[j];
+                    if (Math.abs(l.x - e.x) < e.width / 2 && Math.abs(l.y - e.y) < e.height / 2) {
+                        
+                        if (e.isBoss) {
+                            // Miniboss de ambigüedad alcanzado
+                            lasers.splice(j, 1);
+                            enemies.splice(i, 1);
+                            triggerAmbiguityHack(e);
+                            break;
+                        } else {
+                            // Requerimiento alcanzado por láser: efecto inmediato y validación asíncrona
+                            const reqId = e.id;
+                            const laserTipo = l.type;
+                            const hitX = e.x;
+                            const hitY = e.y;
+                            const hitColor = l.color;
+                            lasers.splice(j, 1);
+                            enemies.splice(i, 1);
+
+                            // Efecto inmediato de impacto para eliminar cualquier sensación de lag
+                            createParticles(hitX, hitY, hitColor);
+                            audio.playLaser(700, 'sawtooth', 0.08);
+
+                            enviarClasificacion(laserTipo, reqId, e.text, hitX, hitY);
+                            break;
+                        }
+                    }
+                }
+
+                // Requerimiento alcanzó el límite izquierdo sin ser interceptado
+                if (e.x < -100) {
+                    enemies.splice(i, 1);
+                    audio.playGlitch();
+                    pushFeed(false, `Impacto de Servidor: Requerimiento alcanzó la red sin interceptar.`);
+                    notificarPenalizacion('no_interceptado');
+                }
+            }
+
+            // Partículas
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.03;
+
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = Math.max(0, p.life);
+                ctx.fillRect(p.x, p.y, p.size, p.size);
+                ctx.globalAlpha = 1.0;
+
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Generador de Enemigos
+        function spawnEnemy() {
+            // Probabilidad de anomalía ambigua (~25% si existen registradas)
+            const isBoss = AMBIGUOUS_BOSSES.length > 0 && Math.random() < 0.25;
+
+            if (isBoss) {
+                const bossData = AMBIGUOUS_BOSSES[Math.floor(Math.random() * AMBIGUOUS_BOSSES.length)];
+                enemies.push({
+                    id: bossData.id,
+                    x: canvas.width + 120,
+                    y: Math.random() * (canvas.height - 160) + 80,
+                    width: 250,
+                    height: 50,
+                    speed: 1.2,
+                    isBoss: true,
+                    data: bossData
+                });
+            } else if (REQUIREMENT_BANK.length > 0) {
+                const req = REQUIREMENT_BANK[Math.floor(Math.random() * REQUIREMENT_BANK.length)];
+                
+                // Registrar conteo para la fórmula de precisión del servidor
+                requerimientosGenerados[req.id] = (requerimientosGenerados[req.id] || 0) + 1;
+
+                enemies.push({
+                    id: req.id,
+                    x: canvas.width + 120,
+                    y: Math.random() * (canvas.height - 160) + 80,
+                    width: 260,
+                    height: 48,
+                    speed: 1.8 + (serverState.puntaje / 3000),
+                    isBoss: false,
+                    text: req.texto || req.text || ""
+                });
+            }
+        }
+
+        // Petición AJAX: Clasificar Requerimiento
+        async function enviarClasificacion(tipoLaser, requerimientoId, textoReq, hitX, hitY) {
+            try {
+                const res = await fetch(`/nave/${ACTIVIDAD_ID}/clasificar/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        tipo_laser: tipoLaser,
+                        requerimiento_id: requerimientoId
+                    })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    serverState = data.estado;
+                    updateHUD();
+
+                    if (data.correcto) {
+                        audio.playExplosion();
+                        createParticles(hitX || (player.x + 80), hitY || player.y, tipoLaser === 'RF' ? '#5b5bf0' : (tipoLaser === 'RNF' ? '#0cc08b' : '#ffb400'));
+                        pushFeed(true, `¡Correcto! Destruido [${data.tipo_correcto}]: "${textoReq}" -> ${data.explicacion}`);
+                    } else {
+                        audio.playGlitch();
+                        createParticles(hitX || (player.x + 80), hitY || player.y, '#ef4444');
+                        pushFeed(false, `¡Glitch! Láser ${tipoLaser} erróneo. Era [${data.tipo_correcto}]: ${data.explicacion}`);
+                    }
+
+                    if (serverState.partida_terminada) {
+                        ejecutarFinDePartida();
+                    }
+                }
+            } catch (err) {
+                console.error("Error al validar clasificación:", err);
+            }
+        }
+
+        // Petición AJAX: Penalizar Escudo
+        async function notificarPenalizacion(motivo) {
+            try {
+                const res = await fetch(`/nave/${ACTIVIDAD_ID}/penalizar/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ motivo: motivo })
+                });
+                const data = await res.json();
+                if (data.ok && data.estado) {
+                    serverState = data.estado;
+                    updateHUD();
+                    if (serverState.partida_terminada) {
+                        ejecutarFinDePartida();
+                    }
+                }
+            } catch (err) {
+                console.error("Error al notificar penalización:", err);
+            }
+        }
+
+        // Manejo del Miniboss de Requerimiento Ambiguo
+        function triggerAmbiguityHack(boss) {
+            isGameRunning = false;
+            audio.playEmp();
+
+            const modal = document.getElementById('ambiguity-modal');
+            document.getElementById('boss-vague-text').innerText = `"${boss.data.texto_ambiguo}"`;
+
+            const optionsContainer = document.getElementById('boss-options');
+            optionsContainer.innerHTML = '';
+
+            let timeLeft = parseFloat(boss.data.tiempo_limite_seg || 5.0);
+            const timerEl = document.getElementById('boss-timer');
+            timerEl.innerText = `${timeLeft.toFixed(1)}s`;
+
+            if (bossTimerInterval) clearInterval(bossTimerInterval);
+
+            bossTimerInterval = setInterval(() => {
+                timeLeft -= 0.1;
+                timerEl.innerText = `${Math.max(0, timeLeft).toFixed(1)}s`;
+                if (timeLeft <= 0) {
+                    clearInterval(bossTimerInterval);
+                    timeoutAmbiguityHack(boss.id);
+                }
+            }, 100);
+
+            boss.data.opciones.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-3 rounded-xl border border-sq-line bg-white hover:bg-violet-50 hover:border-violet-300 text-sq-ink font-semibold transition text-xs flex items-center justify-between gap-3 shadow-sm";
+                btn.innerHTML = `<span>${opt.texto}</span> <i class="fa-solid fa-chevron-right text-violet-400"></i>`;
+                btn.onclick = () => {
+                    clearInterval(bossTimerInterval);
+                    resolverMetricaServidor(opt.id, boss.id);
+                };
+                optionsContainer.appendChild(btn);
+            });
+
+            modal.classList.remove('hidden');
+        }
+
+        async function timeoutAmbiguityHack(anomaliaId) {
+            document.getElementById('ambiguity-modal').classList.add('hidden');
+            audio.playGlitch();
+            pushFeed(false, "¡Tiempo agotado! La anomalía ambigua sobrecargó el escudo (-10%).");
+            isGameRunning = true;
+            requestAnimationFrame(gameLoop);
+            await notificarPenalizacion('tiempo_agotado');
+        }
+
+        async function resolverMetricaServidor(opcionId, anomaliaId) {
+            document.getElementById('ambiguity-modal').classList.add('hidden');
+            // Reanudar el loop inmediatamente para que no haya congelamiento visual
+            isGameRunning = true;
+            requestAnimationFrame(gameLoop);
+            audio.playLaser(900, 'sine', 0.1);
+
+            try {
+                const res = await fetch(`/nave/${ACTIVIDAD_ID}/metrica/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        opcion_id: opcionId,
+                        anomalia_id: anomaliaId
+                    })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    serverState = data.estado;
+                    updateHUD();
+
+                    if (data.correcta) {
+                        audio.playEmp();
+                        enemies = []; // Onda de choque que limpia la pantalla
+                        pushFeed(true, `HACK EXITOSO (+500 pts): ${data.explicacion}`);
+                    } else {
+                        audio.playGlitch();
+                        pushFeed(false, `FALLO DE MÉTRICA (-10% escudo): ${data.explicacion}`);
+                    }
+
+                    if (serverState.partida_terminada) {
+                        ejecutarFinDePartida();
+                    }
+                }
+            } catch (err) {
+                console.error("Error al validar métrica:", err);
+            }
+        }
+
+        // Fin de Partida: Envío al Servidor para cálculo de Precisión y XP
+        async function ejecutarFinDePartida() {
+            isGameRunning = false;
+            audio.playGlitch();
+
+            try {
+                const res = await fetch(`/nave/${ACTIVIDAD_ID}/finalizar/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        requerimientos_generados: requerimientosGenerados
+                    })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    document.getElementById('final-score').innerText = data.puntaje;
+                    document.getElementById('final-xp').innerText = `${data.xp} XP`;
+                    document.getElementById('final-rf').innerText = `${data.precision_rf}%`;
+                    document.getElementById('final-rnf').innerText = `${data.precision_rnf}%`;
+                    document.getElementById('final-rn').innerText = `${data.precision_rn}%`;
+                    document.getElementById('final-precision-global').innerText = `${data.precision_global}%`;
+
+                    const unlockBanner = document.getElementById('unlock-banner');
+                    if (data.siguiente_desbloqueada || data.xp >= 70) {
+                        unlockBanner.classList.remove('hidden');
+                    } else {
+                        unlockBanner.classList.add('hidden');
+                    }
+
+                    document.getElementById('gameover-overlay').classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error("Error al finalizar la partida en el servidor:", err);
+                document.getElementById('final-score').innerText = serverState.puntaje;
+                document.getElementById('gameover-overlay').classList.remove('hidden');
+            }
+        }
+
+        // Funciones de Dibujo y Renderizado
+        function drawPlayer() {
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.fillStyle = '#5b5bf0';
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = 'rgba(91, 91, 240, 0.55)';
+
+            // Silueta de nave / dron
+            ctx.beginPath();
+            ctx.moveTo(player.size, 0);
+            ctx.lineTo(-player.size / 2, -player.size / 2);
+            ctx.lineTo(-player.size / 4, 0);
+            ctx.lineTo(-player.size / 2, player.size / 2);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawEnemyNode(e) {
+            ctx.save();
+            ctx.translate(e.x, e.y);
+
+            if (!e.isBoss && !e.lines) {
+                ctx.font = '600 13px "Plus Jakarta Sans", Inter, sans-serif';
+                const labelText = e.text || e.texto || '';
+                e.lines = wrapLines(labelText, e.width - 28);
+                e.height = Math.max(45, e.lines.length * 17 + 22);
+            }
+
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 2;
+            ctx.shadowBlur = 12;
+            ctx.shadowOffsetY = 3;
+            ctx.shadowColor = 'rgba(15, 23, 42, 0.12)';
+            if (e.isBoss) ctx.setLineDash([7, 4]);
+
+            ctx.beginPath();
+            ctx.roundRect(-e.width/2, -e.height/2, e.width, e.height, 10);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#1e293b';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            if (e.isBoss) {
+                ctx.font = '800 12px "Plus Jakarta Sans", Inter, sans-serif';
+                ctx.fillStyle = '#7c3aed';
+                ctx.fillText('⚠ ANOMALÍA AMBIGUA', 0, 0);
+            } else {
+                ctx.font = '600 13px "Plus Jakarta Sans", Inter, sans-serif';
+                const top = -(e.lines.length - 1) * 17 / 2;
+                e.lines.forEach((ln, idx) => ctx.fillText(ln, 0, top + idx * 17));
+            }
+            ctx.restore();
+        }
+
+        function wrapLines(text, maxW) {
+            if (!text) return [''];
+            const words = String(text).split(' ');
+            const lines = [];
+            let cur = '';
+            words.forEach(w => {
+                const test = cur ? cur + ' ' + w : w;
+                if (ctx.measureText(test).width > maxW && cur) {
+                    lines.push(cur);
+                    cur = w;
+                } else {
+                    cur = test;
+                }
+            });
+            if (cur) lines.push(cur);
+            return lines.length ? lines : [''];
+        }
+
+        function drawCyberGrid() {
+            ctx.strokeStyle = 'rgba(100, 116, 139, 0.08)';
+            ctx.lineWidth = 1;
+            const size = 40;
+            for (let x = 0; x < canvas.width; x += size) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += size) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            }
+        }
+
+        function createParticles(x, y, color) {
+            for (let i = 0; i < 15; i++) {
+                particles.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    size: Math.random() * 4 + 2,
+                    color: color,
+                    life: 1.0
+                });
+            }
+        }
+
+        // ── Toast de feedback ────────────────────────────────────────────────
+        // Un solo toast centrado en la parte superior, dura 2.5 s y desaparece.
+        // No ocupa espacio permanente ni bloquea la vista del jugador.
+        let _toastTimer = null;
+        let _toastEl    = null;
+
+        function pushFeed(isSuccess, message) {
+            const container = document.getElementById('toast-container');
+
+            // Descartar toast anterior inmediatamente
+            if (_toastEl) { _toastEl.remove(); _toastEl = null; }
+            if (_toastTimer) { clearTimeout(_toastTimer); _toastTimer = null; }
+
+            // Truncar mensaje a 100 caracteres para mantenerlo compacto
+            const MAX = 100;
+            const short = message.length > MAX ? message.slice(0, MAX) + '…' : message;
+
+            const toast = document.createElement('div');
+            toast.className = [
+                'toast-in',
+                'inline-flex items-center gap-2',
+                'px-4 py-2 rounded-full text-xs font-bold shadow-lg border',
+                isSuccess
+                    ? 'bg-emerald-500 border-emerald-400 text-white'
+                    : 'bg-rose-500   border-rose-400   text-white'
+            ].join(' ');
+            toast.innerHTML = `<i class="fa-solid ${isSuccess ? 'fa-circle-check' : 'fa-triangle-exclamation'} flex-shrink-0"></i><span>${short}</span>`;
+
+            container.appendChild(toast);
+            _toastEl = toast;
+
+            // Auto-dismiss a los 2.5 s
+            _toastTimer = setTimeout(() => {
+                if (_toastEl !== toast) return;
+                toast.classList.replace('toast-in', 'toast-out');
+                setTimeout(() => { toast.remove(); _toastEl = null; }, 200);
+                _toastTimer = null;
+            }, 2500);
+        }
+    </script>
+</body>
+</html>

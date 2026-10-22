@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'cubecode/cubecode.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Sora:wght@700&display=swap" rel="stylesheet">
+    <title>SoftQuest · CubeCode</title>
+</head>
+<body>
+    <header class="barra">
+        <div class="logo-marca">Temario del mundo</div>
+        <span class="pastilla pastilla--info">Actividades del minijuego</span>
+    </header>
+    <main class="salida">
+        <div class="salida-caja">
+            <section class="aviso-salida">
+                <h1>Ejecución de CubeCode finalizada</h1>
+                <ul>
+                    <li>El sistema finalizó la ejecución actual del minijuego.</li>
+                    <li>El Nivel {{ nivel_numero }} no se considera completado ({{ hechos_nivel }}/{{ total_nivel }} ejercicios).</li>
+                    <li>Podrás ingresar nuevamente a CubeCode cuando lo desees.</li>
+                </ul>
+            </section>
+            <section class="tarjeta-juego">
+                <div class="cabecera-juego">
+                    <div>
+                        <h2>CubeCode</h2>
+                        <p class="subtitulo">Minijuego · Rompecabezas de código</p>
+                    </div>
+                    <span class="estado">EN PROGRESO</span>
+                </div>
+                <p class="dato"><span>Nivel actual</span><strong>{{ nivel_numero }} · {{ nivel_nombre }}</strong></p>
+                <p class="dato"><span>Progreso del nivel</span><strong>{{ hechos_nivel }}/{{ total_nivel }} ejercicios</strong></p>
+                <div class="barra-nivel">
+                    <div style="width: {% widthratio hechos_nivel total_nivel 100 %}%;"></div>
+                </div>
+                <p class="nota">Nivel {{ nivel_numero }} incompleto · no marcado como completado</p>
+                <a class="boton" href="{{ jugar_url }}">Jugar CubeCode</a>
+                <a class="boton boton--claro" href="{{ temario_url }}">Volver al temario</a>
+            </section>
+        </div>
+    </main>
+</body>
+</html>

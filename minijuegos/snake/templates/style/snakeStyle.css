@@ -1,0 +1,636 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #EEF2F7;
+    color: #1F2540;
+    font-family: "Plus Jakarta Sans", "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    min-height: 100vh;
+}
+
+/* -------------------------------------------------------------------------
+   Header superior
+------------------------------------------------------------------------- */
+.top {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 14px 28px;
+    background: #ffffff;
+    border-bottom: 1px solid #E5E9F2;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 800;
+    font-size: 20px;
+    color: #5B5BF0;
+    text-decoration: none;
+}
+
+.brand svg {
+    width: 24px;
+    height: 24px;
+}
+
+.plabel {
+    font-size: 11px;
+    letter-spacing: .1em;
+    color: #6B7494;
+    font-weight: 700;
+}
+
+.ptrack {
+    flex: 0 1 240px;
+    height: 8px;
+    background: #E5E9F2;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.pfill {
+    height: 100%;
+    width: 0%;
+    background: #10C28F;
+    border-radius: 999px;
+    transition: width .4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ppill {
+    background: #10C28F;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 3px 12px;
+    border-radius: 999px;
+}
+
+.top-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-header {
+    background: transparent;
+    border: 1px solid #E5E9F2;
+    color: #6B7494;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all .2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-header:hover {
+    background: #F4F6FB;
+    color: #1F2540;
+    border-color: #CBD5E1;
+}
+
+/* -------------------------------------------------------------------------
+   Contenedor del Juego
+------------------------------------------------------------------------- */
+.game-container {
+    display: grid;
+    grid-template-columns: minmax(0, 720px) 340px;
+    gap: 26px;
+    align-items: start;
+    width: 100%;
+    max-width: 1140px;
+    margin: 24px auto;
+    padding: 0 20px 40px;
+}
+
+/* -------------------------------------------------------------------------
+   Tablero
+------------------------------------------------------------------------- */
+.board-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.mission-banner {
+    background: linear-gradient(135deg, #5B5BF0, #4747D6);
+    color: #ffffff;
+    border-radius: 16px;
+    padding: 16px 22px;
+    font-size: 15px;
+    line-height: 1.45;
+    font-weight: 600;
+    box-shadow: 0 4px 16px rgba(91, 91, 240, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.mission-banner .badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.board-card {
+    position: relative;
+    background: #ffffff;
+    border: 1px solid #E5E9F2;
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(31, 37, 64, 0.08);
+    overflow: hidden;
+}
+
+canvas#snakeCanvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: #FAFBFD;
+    touch-action: none;
+}
+
+/* Prompt en pantalla: "Presiona flecha o WASD" */
+.start-prompt {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(31, 37, 64, 0.88);
+    color: #ffffff;
+    padding: 10px 20px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 700;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+    animation: pulsePrompt 2s infinite ease-in-out;
+    z-index: 5;
+}
+
+@keyframes pulsePrompt {
+    0%, 100% { opacity: 0.95; transform: translateX(-50%) scale(1); }
+    50% { opacity: 0.7; transform: translateX(-50%) scale(0.97); }
+}
+
+/* Controles tactiles D-Pad para movil */
+.dpad {
+    display: none;
+    grid-template-areas:
+        ". u ."
+        "l . r"
+        ". d .";
+    grid-template-columns: repeat(3, 54px);
+    grid-template-rows: repeat(3, 54px);
+    gap: 6px;
+    justify-content: center;
+    margin-top: 14px;
+}
+
+.dpad button {
+    background: #ffffff;
+    border: 1px solid #CBD5E1;
+    border-radius: 14px;
+    font-size: 20px;
+    color: #5B5BF0;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
+    cursor: pointer;
+    font-weight: 800;
+    user-select: none;
+    touch-action: manipulation;
+}
+
+.dpad button:active {
+    background: #5B5BF0;
+    color: #ffffff;
+}
+
+/* -------------------------------------------------------------------------
+   Panel Lateral
+------------------------------------------------------------------------- */
+.panel {
+    background: #ffffff;
+    border: 1px solid #E5E9F2;
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 8px 24px rgba(31, 37, 64, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.panel-header h1 {
+    font-size: 22px;
+    font-weight: 800;
+    color: #1F2540;
+    margin: 0 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.panel-header .subtitle {
+    font-size: 13px;
+    color: #6B7494;
+    font-weight: 600;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.stat-box {
+    background: #F8FAFC;
+    border: 1px solid #E5E9F2;
+    border-radius: 14px;
+    padding: 12px 14px;
+    text-align: center;
+}
+
+.stat-box .stat-label {
+    font-size: 11px;
+    font-weight: 800;
+    color: #6B7494;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 4px;
+}
+
+.stat-box .stat-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #1F2540;
+}
+
+.stat-box.highlight {
+    background: #F4F4FD;
+    border-color: #D8D8FC;
+}
+
+.stat-box.highlight .stat-value {
+    color: #5B5BF0;
+}
+
+.stat-box.gold {
+    background: #FFFDF0;
+    border-color: #FFE699;
+}
+
+.stat-box.gold .stat-value {
+    color: #D97706;
+}
+
+/* Guia pedagógica / Leyenda */
+.legend-card {
+    background: #F8FAFC;
+    border: 1px solid #E5E9F2;
+    border-radius: 14px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.legend-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: #6B7494;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: #1F2540;
+}
+
+.legend-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.legend-icon.target {
+    background: #10C28F;
+    color: #ffffff;
+}
+
+.legend-icon.obstacle {
+    background: #EF4444;
+    color: #ffffff;
+}
+
+.controls-hint {
+    background: #EEF2F7;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #6B7494;
+    line-height: 1.5;
+    text-align: center;
+}
+
+.controls-hint b {
+    color: #1F2540;
+}
+
+/* Botones */
+.btn {
+    background: #5B5BF0;
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+    width: 100%;
+}
+
+.btn:hover {
+    background: #4747D6;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(91, 91, 240, 0.25);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn.btn-ghost {
+    background: transparent;
+    color: #6B7494;
+    border: 1px solid #CBD5E1;
+}
+
+.btn.btn-ghost:hover {
+    background: #F1F5F9;
+    color: #1F2540;
+    border-color: #94A3B8;
+    box-shadow: none;
+}
+
+.btn.btn-success {
+    background: #10C28F;
+}
+
+.btn.btn-success:hover {
+    background: #0EA277;
+    box-shadow: 0 4px 12px rgba(16, 194, 143, 0.25);
+}
+
+.btn.btn-danger {
+    background: #EF4444;
+}
+
+.btn.btn-danger:hover {
+    background: #DC2626;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+}
+
+/* -------------------------------------------------------------------------
+   Modales y Overlays
+------------------------------------------------------------------------- */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s ease;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-card {
+    background: #ffffff;
+    border-radius: 24px;
+    max-width: 520px;
+    width: 100%;
+    padding: 28px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+    transform: scale(0.92);
+    transition: transform .25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-overlay.active .modal-card {
+    transform: scale(1);
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.modal-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.modal-icon.indigo {
+    background: #EEF2FF;
+    color: #5B5BF0;
+}
+
+.modal-icon.success {
+    background: #E6F9F3;
+    color: #10C28F;
+}
+
+.modal-icon.warning {
+    background: #FEF3C7;
+    color: #D97706;
+}
+
+.modal-icon.danger {
+    background: #FEE2E2;
+    color: #EF4444;
+}
+
+.modal-title-group h2 {
+    font-size: 20px;
+    font-weight: 800;
+    color: #1F2540;
+    margin: 0 0 4px;
+}
+
+.modal-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.modal-badge.target {
+    background: #E6F9F3;
+    color: #0EA277;
+}
+
+.modal-badge.obstacle {
+    background: #FEE2E2;
+    color: #DC2626;
+}
+
+.modal-badge.info {
+    background: #EEF2FF;
+    color: #5B5BF0;
+}
+
+.modal-body {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #334155;
+    margin-bottom: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.item-quote {
+    background: #F8FAFC;
+    border-left: 4px solid #5B5BF0;
+    padding: 12px 16px;
+    border-radius: 0 12px 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1F2540;
+}
+
+.item-quote.target {
+    border-left-color: #10C28F;
+    background: #F0FDF9;
+}
+
+.item-quote.obstacle {
+    border-left-color: #EF4444;
+    background: #FEF2F2;
+}
+
+.pedagogical-box {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    padding: 14px;
+}
+
+.pedagogical-box.warning-box {
+    background: #FFFBEB;
+    border-color: #FDE68A;
+}
+
+.pedagogical-box h3 {
+    margin: 0 0 6px;
+    font-size: 13px;
+    font-weight: 800;
+    color: #1E293B;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pedagogical-box p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: #475569;
+}
+
+.contrast-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 12px;
+}
+
+.contrast-table th,
+.contrast-table td {
+    padding: 8px 10px;
+    border: 1px solid #E2E8F0;
+    text-align: left;
+}
+
+.contrast-table th {
+    background: #F1F5F9;
+    font-weight: 700;
+    color: #1F2540;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+/* -------------------------------------------------------------------------
+   Animaciones e indicadores
+------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+    .game-container {
+        grid-template-columns: 1fr;
+    }
+    .dpad {
+        display: grid;
+    }
+}
