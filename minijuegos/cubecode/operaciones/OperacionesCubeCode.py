@@ -1,8 +1,10 @@
 import random
+import re
 
 
 class OperacionesCubeCode:
     PUNTAJE_MAXIMO = 100
+    _ASIGNACION = re.compile(r'^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$')
 
     def revolver_bloques(self, bloques):
         revueltos = list(bloques)
@@ -22,8 +24,65 @@ class OperacionesCubeCode:
             enviados = [int(identificador) for identificador in ids_enviados]
         except (TypeError, ValueError):
             return False
-        correctos = [bloque.id for bloque in self.bloques_correctos(ejercicio)]
-        return bool(correctos) and enviados == correctos
+        correctos = self.bloques_correctos(ejercicio)
+        if not correctos or sorted(enviados) != sorted(bloque.id for bloque in correctos):
+            return False
+        indice = 0
+        for grupo in self._grupos_intercambiables(correctos):
+            recibidos = enviados[indice:indice + len(grupo)]
+            if set(recibidos) != {bloque.id for bloque in grupo}:
+                return False
+            indice += len(grupo)
+        return indice == len(enviados)
+
+    def _asignacion(self, texto):
+        coincidencia = self._ASIGNACION.match(texto.strip())
+        if not coincidencia:
+            return None
+        return coincidencia.group(1), coincidencia.group(2)
+
+    def _menciona(self, expresion, nombres):
+        return any(
+            re.search(r'\b' + re.escape(nombre) + r'\b', expresion)
+            for nombre in nombres
+        )
+
+    def _puede_unirse(self, nombre, expresion, grupo, nombres):
+        if nombre in nombres or self._menciona(expresion, nombres + [nombre]):
+            return False
+        return all(
+            not self._menciona(previa[1], [nombre])
+            for previa in (self._asignacion(bloque.texto) for bloque in grupo)
+            if previa
+        )
+
+    def _grupos_intercambiables(self, bloques):
+        """Agrupa asignaciones seguidas que no se usan entre sí.
+
+        x = 4 y y = 9 pueden ir en cualquier orden. doble = numero * 2
+        tiene que ir después de numero = 7.
+        """
+        grupos = []
+        grupo = []
+        nombres = []
+        for bloque in bloques:
+            parsed = self._asignacion(bloque.texto)
+            if parsed and self._puede_unirse(parsed[0], parsed[1], grupo, nombres):
+                grupo.append(bloque)
+                nombres.append(parsed[0])
+                continue
+            if grupo:
+                grupos.append(grupo)
+                grupo = []
+                nombres = []
+            if parsed and self._puede_unirse(parsed[0], parsed[1], grupo, nombres):
+                grupo = [bloque]
+                nombres = [parsed[0]]
+            else:
+                grupos.append([bloque])
+        if grupo:
+            grupos.append(grupo)
+        return grupos
 
     def calcular_puntaje(self, hechos, total):
         if not isinstance(hechos, int) or not isinstance(total, int):

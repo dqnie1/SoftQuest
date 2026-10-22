@@ -9,6 +9,7 @@ from minijuegos.cubecode.models import (
     CubeCode,
     EjercicioCubeCode,
     NivelCubeCode,
+    ProgresoCubeCode,
 )
 from minijuegos.cubecode.operaciones.OperacionesCubeCode import OperacionesCubeCode
 
@@ -59,6 +60,28 @@ class OperacionesCubeCodeTests(TestCase):
         self.assertFalse(self.ops.validar_solucion(self.ejercicio, correcto + [self.senuelo.id]))
         self.assertFalse(self.ops.validar_solucion(self.ejercicio, [self.primero.id]))
         self.assertFalse(self.ops.validar_solucion(self.ejercicio, ['x']))
+
+    def test_acepta_x_y_en_cualquier_orden(self):
+        ejercicio = EjercicioCubeCode.objects.create(
+            nivel=self.nivel,
+            numero=2,
+            titulo='El mayor de dos números',
+            objetivo='Mostrar el mayor entre x y y.',
+        )
+        x = BloqueCubeCode.objects.create(ejercicio=ejercicio, texto='x = 4', orden_solucion=1)
+        y = BloqueCubeCode.objects.create(ejercicio=ejercicio, texto='y = 9', orden_solucion=2)
+        condicion = BloqueCubeCode.objects.create(ejercicio=ejercicio, texto='if y > x:', orden_solucion=3)
+        mostrar_y = BloqueCubeCode.objects.create(ejercicio=ejercicio, texto='print(y)', orden_solucion=4)
+        alternativa = BloqueCubeCode.objects.create(ejercicio=ejercicio, texto='else:', orden_solucion=5)
+        mostrar_x = BloqueCubeCode.objects.create(ejercicio=ejercicio, texto='print(x)', orden_solucion=6)
+        menor = BloqueCubeCode.objects.create(ejercicio=ejercicio, texto='if y < x:', orden_solucion=None)
+        resto = [condicion.id, mostrar_y.id, alternativa.id, mostrar_x.id]
+        self.assertTrue(self.ops.validar_solucion(ejercicio, [x.id, y.id, *resto]))
+        self.assertTrue(self.ops.validar_solucion(ejercicio, [y.id, x.id, *resto]))
+        self.assertFalse(self.ops.validar_solucion(
+            ejercicio,
+            [y.id, x.id, menor.id, mostrar_x.id, alternativa.id, mostrar_y.id],
+        ))
 
     def test_serializar_no_revela_la_solucion(self):
         datos = self.ops.serializar_ejercicio(self.ejercicio, [], 0)
@@ -156,12 +179,30 @@ class CubeCodeViewsTests(TestCase):
             content_type='application/json',
         )
         salida = self.client.post(reverse('cubecode:salir', args=[self.actividad.id]))
-        self.assertRedirects(salida, reverse('cubecode:salida', args=[self.actividad.id]))
-        pagina = self.client.get(reverse('cubecode:salida', args=[self.actividad.id]))
-        self.assertContains(pagina, 'no se considera completado')
-        self.assertContains(pagina, '0/1 ejercicios')
+        self.assertRedirects(salida, reverse('temario_mundo', args=[self.mundo.id]))
         juego = self.client.get(reverse('cubecode:jugar', args=[self.actividad.id]))
         self.assertContains(juego, 'Cierre')
+
+    def test_volver_a_jugar_empieza_desde_el_inicio(self):
+        self.client.post(
+            reverse('cubecode:comprobar', args=[self.actividad.id]),
+            data={'ejercicio_id': self.ejercicio_1.id, 'bloques': self._ids(self.ejercicio_1)},
+            content_type='application/json',
+        )
+        self.client.post(
+            reverse('cubecode:comprobar', args=[self.actividad.id]),
+            data={'ejercicio_id': self.ejercicio_2.id, 'bloques': self._ids(self.ejercicio_2)},
+            content_type='application/json',
+        )
+        juego = self.client.get(reverse('cubecode:jugar', args=[self.actividad.id]))
+        self.assertContains(juego, 'const terminado = false')
+        self.assertContains(juego, 'Inicio')
+        partida = ProgresoCubeCode.objects.get(usuario=self.usuario, cubecode=self.cubecode)
+        self.assertEqual(partida.ejercicios_hechos, [])
+        self.assertEqual(partida.puntaje, 0)
+        guardado = ProgresoActividad.objects.get(actividad=self.actividad, usuario=self.usuario)
+        self.assertEqual(guardado.estado, 'completado')
+        self.assertEqual(guardado.puntaje, 100)
 
     def test_sin_bloques_muestra_el_error(self):
         otra = Actividad.objects.create(

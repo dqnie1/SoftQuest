@@ -16,15 +16,20 @@
     {% endif %}
     <form id="form-salir" method="post" action="{{ salir_url }}">{% csrf_token %}</form>
 
-    <header class="barra" id="barra">
-        <div class="logo-marca"><span class="logo-cubo"></span> CubeCode</div>
-        <div class="pastillas" id="pastillas">
-            <span class="pastilla pastilla--score" data-score>Score: {{ score }}/100</span>
-            <span class="pastilla pastilla--info" id="pill-nivel">Nivel 1</span>
-            <span class="pastilla pastilla--info" id="pill-ejercicio">Ejercicio 1 de 4</span>
+    <header class="top" id="barra">
+        <span class="plabel">PROGRESO</span>
+        <div class="ptrack" id="pastillas">
+            <div class="pfill" id="pbar" style="width: {{ score }}%;"></div>
         </div>
-        <span class="pastilla pastilla--info" id="pill-cierre" hidden>Nivel completado</span>
+        <span class="ppill" id="ppill" data-score>{{ score }}/100</span>
+        <span class="ppill ppill--estado" id="pill-cierre" hidden>Nivel completado</span>
         <button class="salir" id="btn-salir" type="submit" form="form-salir">Salir</button>
+        <div class="brand">
+            <svg viewBox="0 0 24 24" fill="#5B5BF0" aria-hidden="true">
+                <path d="M13 2 4 14h6l-1 8 9-12h-6z" />
+            </svg>
+            SoftQuest
+        </div>
     </header>
 
     <main class="lectura" id="pantalla-lectura">
@@ -36,10 +41,9 @@
             <p class="nota-progreso" id="texto-progreso">0/4 ejercicios completados</p>
         </section>
         <section class="tarjeta enunciado">
-            <p class="etiqueta" id="etiqueta-ejercicio">NIVEL 1 · EJERCICIO 1</p>
-            <h1 id="titulo-ejercicio"></h1>
             <div class="objetivo">
-                <strong>OBJETIVO</strong>
+                <p class="etiqueta" id="etiqueta-ejercicio">NIVEL 1 · EJERCICIO 1</p>
+                <h1 id="titulo-ejercicio"></h1>
                 <p id="texto-objetivo"></p>
             </div>
             <p class="instruccion">Analiza el problema, elige los bloques necesarios (ignora distractores), ordénalos en «Tu código» y presiona Comprobar.</p>
@@ -86,10 +90,10 @@
             <p class="insignia" id="nivel-badge">NIVEL 1</p>
             <h1>Nivel completado</h1>
             <div class="medidas">
-                <div class="medida"><span>Ejercicios</span><strong id="nivel-ejercicios">4/4</strong></div>
-                <div class="medida"><span>Score del nivel</span><strong id="nivel-score">0/100</strong></div>
+                <div class="medida"><span>Ejercicios</span><strong id="nivel-ejercicios">3/3</strong></div>
+                <div class="medida"><span>Score del juego</span><strong id="nivel-score">0/100</strong></div>
             </div>
-            <p class="acumulado" id="nivel-acumulado">Acumulado: 0/100</p>
+            <p class="acumulado" id="nivel-acumulado">Este nivel suma 0 puntos. El total del juego es 100.</p>
             <div class="progreso-final">
                 <p><span>Progreso del nivel</span><span>100%</span></p>
                 <div class="barra-nivel"><div style="width: 100%;"></div></div>
@@ -163,15 +167,16 @@
             nodos.nivel.hidden = nombre !== 'nivel';
             nodos.final.hidden = nombre !== 'final';
             const celebracion = nombre === 'nivel' || nombre === 'final';
-            nodos.pastillas.hidden = celebracion;
             nodos.salir.hidden = celebracion;
             nodos.cierre.hidden = !celebracion;
         }
 
         function ponerScore(score) {
+            const valor = Math.max(0, Math.min(100, Number(score) || 0));
             document.querySelectorAll('[data-score]').forEach((nodo) => {
-                nodo.textContent = `Score: ${score}/100`;
+                nodo.textContent = `${valor}/100`;
             });
+            document.getElementById('pbar').style.width = `${valor}%`;
         }
 
         function ocultarError() {
@@ -189,8 +194,6 @@
 
         function pintarLectura() {
             ponerScore(actual.score);
-            document.getElementById('pill-nivel').textContent = `Nivel ${actual.nivel_numero}`;
-            document.getElementById('pill-ejercicio').textContent = `Ejercicio ${actual.ejercicio_numero} de ${actual.total_nivel}`;
             document.getElementById('nombre-nivel').textContent = `${actual.nivel_numero} · ${actual.nivel_nombre}`;
             document.getElementById('numero-ejercicio').textContent = `${actual.ejercicio_numero} de ${actual.total_nivel}`;
             document.getElementById('etiqueta-ejercicio').textContent = `NIVEL ${actual.nivel_numero} · EJERCICIO ${actual.ejercicio_numero}`;
@@ -322,8 +325,8 @@
             document.getElementById('pill-cierre').textContent = `Nivel ${resumen.numero} completado`;
             document.getElementById('nivel-badge').textContent = `NIVEL ${resumen.numero}`;
             document.getElementById('nivel-ejercicios').textContent = `${resumen.ejercicios}/${resumen.ejercicios}`;
-            document.getElementById('nivel-score').textContent = `${resumen.score_nivel}/100`;
-            document.getElementById('nivel-acumulado').textContent = `Acumulado: ${resumen.score_total}/100`;
+            document.getElementById('nivel-score').textContent = `${resumen.score_total}/100`;
+            document.getElementById('nivel-acumulado').textContent = `Este nivel suma ${resumen.score_nivel} puntos. El total del juego es 100.`;
             mostrar('nivel');
         }
 
@@ -397,7 +400,7 @@
                 return;
             }
             ponerScore(data.score);
-            document.getElementById('modal-texto').textContent = `Progreso del nivel: ${data.completados_nivel}/${data.total_nivel} ejercicios · Score: ${data.score}/100`;
+            document.getElementById('modal-texto').textContent = `Ejercicios de este nivel: ${data.completados_nivel}/${data.total_nivel} · Score del juego: ${data.score}/100`;
             if (data.accion === 'fin') {
                 mostrarFinal(data.resumen_final);
                 return;
@@ -413,6 +416,7 @@
         });
 
         if (terminado) {
+            ponerScore(scoreInicial);
             mostrarFinal({score: scoreInicial, ejercicios: temarioListo, total: totalEjercicios});
         } else {
             aplicarEjercicio(JSON.parse(document.getElementById('ejercicio-data').textContent));

@@ -53,7 +53,7 @@ def _guardar_actividad(usuario, actividad, progreso, completo):
     )
     if created:
         return obj
-    obj.puntaje = progreso.puntaje
+    obj.puntaje = max(obj.puntaje or 0, progreso.puntaje or 0)
     obj.intentos = progreso.intentos
     if completo:
         obj.estado = 'completado'
@@ -86,9 +86,14 @@ def jugar(request, actividad_id):
     usuario = OperacionesContenido().obtener_usuario(request)
     progreso = _obtener_progreso(usuario, cubecode)
     hechos = [int(item) for item in (progreso.ejercicios_hechos or [])]
+    total = _total_ejercicios(cubecode)
+    if total > 0 and len(hechos) >= total:
+        progreso.ejercicios_hechos = []
+        progreso.puntaje = 0
+        progreso.save(update_fields=['ejercicios_hechos', 'puntaje'])
+        hechos = []
     ops = OperacionesCubeCode()
     actual = ops.ejercicio_actual(cubecode, hechos)
-    total = _total_ejercicios(cubecode)
     context = {
         'temario_url': temario_url,
         'salir_url': reverse('cubecode:salir', args=[actividad.id]),
@@ -201,10 +206,9 @@ def salir(request, actividad_id):
     progreso = _obtener_progreso(usuario, cubecode)
     total = _total_ejercicios(cubecode)
     completo = total > 0 and len(progreso.ejercicios_hechos or []) >= total
-    if completo:
-        return redirect(_url_temario(actividad))
-    _guardar_actividad(usuario, actividad, progreso, False)
-    return redirect('cubecode:salida', actividad_id=actividad.id)
+    if not completo:
+        _guardar_actividad(usuario, actividad, progreso, False)
+    return redirect(_url_temario(actividad))
 
 
 @login_required
