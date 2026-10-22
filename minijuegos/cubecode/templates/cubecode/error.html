@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'cubecode/cubecode.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Sora:wght@700&display=swap" rel="stylesheet">
+    <title>SoftQuest · CubeCode</title>
+</head>
+<body>
+    <main class="error-carga">
+        <section class="error-caja">
+            <p class="kicker">EXCEPCIÓN · ERROR DE CARGA</p>
+            <h1>No se pudo cargar el juego</h1>
+            <p>Ocurrió un error al intentar cargar el juego. Por favor, intenta de nuevo más tarde.</p>
+            <a class="boton boton--rojo" href="{{ temario_url }}">Volver al temario &gt;</a>
+        </section>
+    </main>
+</body>
+</html>

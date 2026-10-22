@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'cubecode/cubecode.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Sora:wght@700&display=swap" rel="stylesheet">
+    <title>SoftQuest · CubeCode</title>
+</head>
+<body>
+    {% if ejercicio %}
+    {{ ejercicio|json_script:"ejercicio-data" }}
+    {% endif %}
+    <form id="form-salir" method="post" action="{{ salir_url }}">{% csrf_token %}</form>
+
+    <header class="barra" id="barra">
+        <div class="logo-marca"><span class="logo-cubo"></span> CubeCode</div>
+        <div class="pastillas" id="pastillas">
+            <span class="pastilla pastilla--score" data-score>Score: {{ score }}/100</span>
+            <span class="pastilla pastilla--info" id="pill-nivel">Nivel 1</span>
+            <span class="pastilla pastilla--info" id="pill-ejercicio">Ejercicio 1 de 4</span>
+        </div>
+        <span class="pastilla pastilla--info" id="pill-cierre" hidden>Nivel completado</span>
+        <button class="salir" id="btn-salir" type="submit" form="form-salir">Salir</button>
+    </header>
+
+    <main class="lectura" id="pantalla-lectura">
+        <section class="tarjeta progreso">
+            <h2>PROGRESO DEL NIVEL</h2>
+            <div class="fila-dato"><span>Nivel</span><strong id="nombre-nivel">1 · Fundamentos</strong></div>
+            <div class="fila-dato"><span>Ejercicio</span><strong id="numero-ejercicio">1 de 4</strong></div>
+            <div class="barra-nivel"><div id="barra-nivel"></div></div>
+            <p class="nota-progreso" id="texto-progreso">0/4 ejercicios completados</p>
+        </section>
+        <section class="tarjeta enunciado">
+            <p class="etiqueta" id="etiqueta-ejercicio">NIVEL 1 · EJERCICIO 1</p>
+            <h1 id="titulo-ejercicio"></h1>
+            <div class="objetivo">
+                <strong>OBJETIVO</strong>
+                <p id="texto-objetivo"></p>
+            </div>
+            <p class="instruccion">Analiza el problema, elige los bloques necesarios (ignora distractores), ordénalos en «Tu código» y presiona Comprobar.</p>
+            <button class="boton" id="btn-armar" type="button">Armar código</button>
+        </section>
+        <section class="tarjeta vista">
+            <h2>Bloques disponibles</h2>
+            <p class="vista-cuenta" id="vista-cuenta"></p>
+            <div class="lista-bloques" id="vista-bloques"></div>
+        </section>
+    </main>
+
+    <section class="juego" id="pantalla-juego" hidden>
+        <div class="franja-objetivo" id="franja-objetivo"></div>
+        <div class="tablero">
+            <section class="columna">
+                <div class="columna-cabecera">
+                    <h2>Bloques disponibles</h2>
+                    <span class="restantes" id="restantes">0 restantes</span>
+                </div>
+                <div class="lista-bloques" id="pool"></div>
+            </section>
+            <section class="columna columna--codigo" id="panel-codigo">
+                <h2>Tu código</h2>
+                <p class="ayuda" id="ayuda-codigo">Ordena y completa la solución</p>
+                <div class="zona-codigo" id="zona-codigo"></div>
+                <div class="acciones">
+                    <button class="boton boton--claro" id="btn-limpiar" type="button">Limpiar área</button>
+                    <button class="boton" id="btn-comprobar" type="button" disabled>Comprobar</button>
+                </div>
+            </section>
+        </div>
+        <div class="aviso-error" id="aviso-error" hidden>
+            <span class="marca-error">×</span>
+            <div>
+                <strong>La solución no es correcta.</strong>
+                <p>Puedes reorganizar, retirar o agregar bloques y volver a presionar Comprobar. El ejercicio sigue disponible.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="cierre" id="pantalla-nivel" hidden>
+        <article class="tarjeta resultado">
+            <p class="insignia" id="nivel-badge">NIVEL 1</p>
+            <h1>Nivel completado</h1>
+            <div class="medidas">
+                <div class="medida"><span>Ejercicios</span><strong id="nivel-ejercicios">4/4</strong></div>
+                <div class="medida"><span>Score del nivel</span><strong id="nivel-score">0/100</strong></div>
+            </div>
+            <p class="acumulado" id="nivel-acumulado">Acumulado: 0/100</p>
+            <div class="progreso-final">
+                <p><span>Progreso del nivel</span><span>100%</span></p>
+                <div class="barra-nivel"><div style="width: 100%;"></div></div>
+            </div>
+            <button class="boton" id="btn-siguiente-nivel" type="button">Continuar al siguiente nivel</button>
+        </article>
+    </section>
+
+    <section class="cierre" id="pantalla-final" hidden>
+        <article class="tarjeta resultado">
+            <p class="insignia">COMPLETADO</p>
+            <h1>CubeCode completado</h1>
+            <div class="medidas">
+                <div class="medida"><span>Ejercicios</span><strong id="final-ejercicios">{{ ejercicios_hechos }}/{{ ejercicios_total }}</strong></div>
+                <div class="medida"><span>Score final</span><strong id="final-score">{{ score }}/100</strong></div>
+            </div>
+            <div class="progreso-final">
+                <p><span>Progreso del juego</span><span>100%</span></p>
+                <div class="barra-nivel"><div style="width: 100%;"></div></div>
+            </div>
+            <a class="boton" href="{{ temario_url }}">Volver al temario</a>
+        </article>
+    </section>
+
+    <div class="modal" id="modal" hidden>
+        <article class="modal-tarjeta">
+            <div class="paloma">✓</div>
+            <h2>¡Ejercicio completado correctamente!</h2>
+            <p class="resumen-modal" id="modal-texto"></p>
+            <button class="boton" id="btn-modal" type="button">Siguiente ejercicio</button>
+        </article>
+    </div>
+
+    <script>
+        const terminado = {{ terminado|yesno:"true,false" }};
+        const temarioListo = {{ ejercicios_hechos|default:0 }};
+        const totalEjercicios = {{ ejercicios_total|default:0 }};
+        const scoreInicial = {{ score|default:0 }};
+        const comprobarUrl = "{{ comprobar_url|escapejs }}";
+        const csrfToken = document.querySelector('#form-salir input[name=csrfmiddlewaretoken]').value;
+        const nodos = {
+            lectura: document.getElementById('pantalla-lectura'),
+            juego: document.getElementById('pantalla-juego'),
+            nivel: document.getElementById('pantalla-nivel'),
+            final: document.getElementById('pantalla-final'),
+            pastillas: document.getElementById('pastillas'),
+            cierre: document.getElementById('pill-cierre'),
+            salir: document.getElementById('btn-salir'),
+        };
+
+        let actual = null;
+        let disponibles = [];
+        let ranuras = [];
+        let pendiente = null;
+        let alContinuar = null;
+        let bloqueado = false;
+        let arrastrado = null;
+
+        function prepararRanuras() {
+            ranuras = [];
+            disponibles = actual.bloques.map((bloque) => ({...bloque}));
+        }
+
+        function colocados() {
+            return ranuras.filter(Boolean);
+        }
+
+        function mostrar(nombre) {
+            nodos.lectura.hidden = nombre !== 'lectura';
+            nodos.juego.hidden = nombre !== 'juego';
+            nodos.nivel.hidden = nombre !== 'nivel';
+            nodos.final.hidden = nombre !== 'final';
+            const celebracion = nombre === 'nivel' || nombre === 'final';
+            nodos.pastillas.hidden = celebracion;
+            nodos.salir.hidden = celebracion;
+            nodos.cierre.hidden = !celebracion;
+        }
+
+        function ponerScore(score) {
+            document.querySelectorAll('[data-score]').forEach((nodo) => {
+                nodo.textContent = `Score: ${score}/100`;
+            });
+        }
+
+        function ocultarError() {
+            document.getElementById('panel-codigo').classList.remove('panel--error');
+            document.getElementById('aviso-error').hidden = true;
+        }
+
+        function aplicarEjercicio(datos) {
+            actual = datos;
+            prepararRanuras();
+            ocultarError();
+            pintarLectura();
+            mostrar('lectura');
+        }
+
+        function pintarLectura() {
+            ponerScore(actual.score);
+            document.getElementById('pill-nivel').textContent = `Nivel ${actual.nivel_numero}`;
+            document.getElementById('pill-ejercicio').textContent = `Ejercicio ${actual.ejercicio_numero} de ${actual.total_nivel}`;
+            document.getElementById('nombre-nivel').textContent = `${actual.nivel_numero} · ${actual.nivel_nombre}`;
+            document.getElementById('numero-ejercicio').textContent = `${actual.ejercicio_numero} de ${actual.total_nivel}`;
+            document.getElementById('etiqueta-ejercicio').textContent = `NIVEL ${actual.nivel_numero} · EJERCICIO ${actual.ejercicio_numero}`;
+            document.getElementById('titulo-ejercicio').textContent = actual.titulo;
+            document.getElementById('texto-objetivo').textContent = actual.objetivo;
+            document.getElementById('texto-progreso').textContent = `${actual.completados_nivel}/${actual.total_nivel} ejercicios completados`;
+            const porcentaje = actual.total_nivel ? (actual.completados_nivel / actual.total_nivel) * 100 : 0;
+            document.getElementById('barra-nivel').style.width = `${porcentaje}%`;
+            document.getElementById('vista-cuenta').textContent = `Vista previa · ${actual.bloques.length} fragmentos para este ejercicio`;
+            const lista = document.getElementById('vista-bloques');
+            lista.replaceChildren();
+            actual.bloques.forEach((bloque) => {
+                const nodo = document.createElement('div');
+                nodo.className = 'bloque bloque--vista';
+                nodo.textContent = bloque.texto;
+                lista.append(nodo);
+            });
+        }
+
+        function pintarJuego() {
+            const puestos = colocados();
+            document.getElementById('franja-objetivo').textContent = `Objetivo: ${actual.objetivo}`;
+            document.getElementById('restantes').textContent = `${disponibles.length} restantes`;
+            document.getElementById('ayuda-codigo').textContent = `${puestos.length} líneas colocadas · ordena y completa la solución`;
+            document.getElementById('btn-comprobar').disabled = puestos.length === 0;
+            const pool = document.getElementById('pool');
+            const zona = document.getElementById('zona-codigo');
+            pool.replaceChildren();
+            zona.replaceChildren();
+            disponibles.forEach((bloque) => pool.append(crearBloque(bloque, false)));
+            ranuras.forEach((bloque, indice) => {
+                if (bloque) {
+                    zona.append(crearBloque(bloque, true, indice));
+                    return;
+                }
+                const hueco = document.createElement('div');
+                hueco.className = 'hueco';
+                hueco.addEventListener('dragover', (evento) => evento.preventDefault());
+                hueco.addEventListener('drop', (evento) => {
+                    evento.preventDefault();
+                    evento.stopPropagation();
+                    colocar(arrastrado, indice);
+                });
+                zona.append(hueco);
+            });
+        }
+
+        function crearBloque(bloque, enCodigo, indice) {
+            const nodo = document.createElement('div');
+            nodo.className = 'bloque';
+            nodo.draggable = true;
+            nodo.dataset.id = String(bloque.id);
+            const asa = document.createElement('span');
+            asa.className = 'asa';
+            asa.textContent = '⋮⋮';
+            const texto = document.createElement('span');
+            texto.textContent = bloque.texto;
+            nodo.append(asa, texto);
+            nodo.addEventListener('dragstart', () => {
+                arrastrado = bloque.id;
+                nodo.dataset.arrastre = '1';
+            });
+            nodo.addEventListener('dragend', () => { arrastrado = null; });
+            if (enCodigo) {
+                const quitar = document.createElement('button');
+                quitar.type = 'button';
+                quitar.textContent = '×';
+                quitar.addEventListener('click', () => sacar(indice));
+                nodo.append(quitar);
+                nodo.addEventListener('dragover', (evento) => evento.preventDefault());
+                nodo.addEventListener('drop', (evento) => {
+                    evento.preventDefault();
+                    evento.stopPropagation();
+                    colocar(arrastrado, indice);
+                });
+            } else {
+                nodo.addEventListener('click', () => {
+                    if (nodo.dataset.arrastre === '1') {
+                        nodo.dataset.arrastre = '';
+                        return;
+                    }
+                    colocar(bloque.id, null);
+                });
+            }
+            return nodo;
+        }
+
+        function colocar(id, indiceDestino) {
+            if (id == null) return;
+            ocultarError();
+            if (indiceDestino == null) {
+                indiceDestino = ranuras.findIndex((slot) => slot == null);
+                if (indiceDestino < 0) {
+                    ranuras.push(null);
+                    indiceDestino = ranuras.length - 1;
+                }
+            }
+
+            const desdePool = disponibles.findIndex((bloque) => bloque.id === id);
+            const desdeRanura = ranuras.findIndex((bloque) => bloque && bloque.id === id);
+            if (desdePool < 0 && desdeRanura < 0) return;
+            if (desdeRanura === indiceDestino) return;
+
+            if (desdePool >= 0) {
+                const bloque = disponibles.splice(desdePool, 1)[0];
+                const ocupante = ranuras[indiceDestino];
+                if (ocupante) disponibles.push(ocupante);
+                ranuras[indiceDestino] = bloque;
+            } else {
+                const bloque = ranuras[desdeRanura];
+                ranuras[desdeRanura] = ranuras[indiceDestino];
+                ranuras[indiceDestino] = bloque;
+            }
+            arrastrado = null;
+            pintarJuego();
+        }
+
+        function sacar(indice) {
+            const bloque = ranuras[indice];
+            if (!bloque) return;
+            ranuras[indice] = null;
+            disponibles.push(bloque);
+            ocultarError();
+            pintarJuego();
+        }
+
+        function mostrarNivel(resumen, siguiente) {
+            pendiente = siguiente;
+            document.getElementById('pill-cierre').textContent = `Nivel ${resumen.numero} completado`;
+            document.getElementById('nivel-badge').textContent = `NIVEL ${resumen.numero}`;
+            document.getElementById('nivel-ejercicios').textContent = `${resumen.ejercicios}/${resumen.ejercicios}`;
+            document.getElementById('nivel-score').textContent = `${resumen.score_nivel}/100`;
+            document.getElementById('nivel-acumulado').textContent = `Acumulado: ${resumen.score_total}/100`;
+            mostrar('nivel');
+        }
+
+        function mostrarFinal(resumen) {
+            document.getElementById('pill-cierre').textContent = 'CubeCode completado';
+            document.getElementById('final-ejercicios').textContent = `${resumen.ejercicios}/${resumen.total}`;
+            document.getElementById('final-score').textContent = `${resumen.score}/100`;
+            mostrar('final');
+        }
+
+        document.getElementById('btn-armar').addEventListener('click', () => {
+            prepararRanuras();
+            ocultarError();
+            pintarJuego();
+            mostrar('juego');
+        });
+        document.getElementById('btn-limpiar').addEventListener('click', () => {
+            prepararRanuras();
+            ocultarError();
+            pintarJuego();
+        });
+        document.getElementById('pool').addEventListener('dragover', (evento) => evento.preventDefault());
+        document.getElementById('pool').addEventListener('drop', (evento) => {
+            evento.preventDefault();
+            const indice = ranuras.findIndex((bloque) => bloque && bloque.id === arrastrado);
+            if (indice >= 0) sacar(indice);
+        });
+        document.getElementById('zona-codigo').addEventListener('dragover', (evento) => evento.preventDefault());
+        document.getElementById('zona-codigo').addEventListener('drop', (evento) => {
+            evento.preventDefault();
+            colocar(arrastrado, null);
+        });
+        document.getElementById('btn-modal').addEventListener('click', () => {
+            document.getElementById('modal').hidden = true;
+            if (alContinuar) alContinuar();
+        });
+        document.getElementById('btn-siguiente-nivel').addEventListener('click', () => {
+            if (pendiente) aplicarEjercicio(pendiente);
+        });
+        document.getElementById('btn-comprobar').addEventListener('click', async () => {
+            const puestos = colocados();
+            if (!puestos.length || bloqueado) return;
+            bloqueado = true;
+            let data = null;
+            try {
+                const respuesta = await fetch(comprobarUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken,
+                    },
+                    body: JSON.stringify({
+                        ejercicio_id: actual.id,
+                        bloques: puestos.map((bloque) => bloque.id),
+                    }),
+                });
+                data = await respuesta.json();
+            } catch (error) {
+                data = null;
+            }
+            bloqueado = false;
+            if (!data || !data.ok) {
+                document.getElementById('aviso-error').querySelector('strong').textContent = 'No se pudo comprobar la solución.';
+                document.getElementById('aviso-error').hidden = false;
+                return;
+            }
+            if (!data.correcto) {
+                document.getElementById('aviso-error').querySelector('strong').textContent = 'La solución no es correcta.';
+                document.getElementById('panel-codigo').classList.add('panel--error');
+                document.getElementById('aviso-error').hidden = false;
+                return;
+            }
+            ponerScore(data.score);
+            document.getElementById('modal-texto').textContent = `Progreso del nivel: ${data.completados_nivel}/${data.total_nivel} ejercicios · Score: ${data.score}/100`;
+            if (data.accion === 'fin') {
+                mostrarFinal(data.resumen_final);
+                return;
+            }
+            if (data.accion === 'nivel') {
+                document.getElementById('btn-modal').textContent = 'Continuar';
+                alContinuar = () => mostrarNivel(data.resumen_nivel, data.ejercicio);
+            } else {
+                document.getElementById('btn-modal').textContent = 'Siguiente ejercicio';
+                alContinuar = () => aplicarEjercicio(data.ejercicio);
+            }
+            document.getElementById('modal').hidden = false;
+        });
+
+        if (terminado) {
+            mostrarFinal({score: scoreInicial, ejercicios: temarioListo, total: totalEjercicios});
+        } else {
+            aplicarEjercicio(JSON.parse(document.getElementById('ejercicio-data').textContent));
+        }
+    </script>
+</body>
+</html>
