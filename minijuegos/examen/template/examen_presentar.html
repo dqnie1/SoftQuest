@@ -269,9 +269,26 @@
         }
 
         .match-columns-grid {
+            position: relative;
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 1.5rem;
+        }
+
+        .match-lineas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+            pointer-events: none;
+        }
+
+        .match-linea {
+            fill: none;
+            stroke: #4f46e5;
+            stroke-width: 2.5;
+            opacity: 0.85;
         }
 
         .match-col-header {
@@ -284,6 +301,8 @@
         }
 
         .match-card {
+            position: relative;
+            z-index: 1;
             background: #f8fafc;
             border: 2px solid #e2e8f0;
             border-radius: 12px;
@@ -694,6 +713,7 @@
                         Haz clic en un <strong>Concepto</strong> (columna izquierda) y luego haz clic en su <strong>Definición</strong> correspondiente (columna derecha) para emparejarlos.
                     </p>
                     <div class="match-columns-grid">
+                        <svg class="match-lineas" id="lineasMatch" aria-hidden="true"></svg>
                         <div>
                             <div class="match-col-header">Conceptos / Términos</div>
                             <div id="columnaConceptos"></div>
@@ -786,6 +806,41 @@
 
                 colDefiniciones.appendChild(dDiv);
             });
+
+            dibujarLineasMatch(bloque);
+        }
+
+        function dibujarLineasMatch(bloque) {
+            const svgLineas = document.getElementById('lineasMatch');
+            if (!svgLineas) return;
+
+            svgLineas.innerHTML = '';
+            const areaRect = svgLineas.getBoundingClientRect();
+            if (!areaRect.width || !areaRect.height) return;
+
+            svgLineas.setAttribute('viewBox', `0 0 ${areaRect.width} ${areaRect.height}`);
+
+            bloque.conceptos.forEach(concepto => {
+                const definicionId = respuestasUsuario[`concepto_${concepto.id}`];
+                if (definicionId === undefined) return;
+
+                const origen = document.getElementById(`card_concepto_${concepto.id}`);
+                const destino = document.getElementById(`card_definicion_${definicionId}`);
+                if (!origen || !destino) return;
+
+                const origenRect = origen.getBoundingClientRect();
+                const destinoRect = destino.getBoundingClientRect();
+                const x1 = origenRect.right - areaRect.left;
+                const y1 = origenRect.top + origenRect.height / 2 - areaRect.top;
+                const x2 = destinoRect.left - areaRect.left;
+                const y2 = destinoRect.top + destinoRect.height / 2 - areaRect.top;
+                const xMedio = (x1 + x2) / 2;
+
+                const linea = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                linea.setAttribute('d', `M ${x1} ${y1} C ${xMedio} ${y1}, ${xMedio} ${y2}, ${x2} ${y2}`);
+                linea.setAttribute('class', 'match-linea');
+                svgLineas.appendChild(linea);
+            });
         }
 
         function clickConcepto(cId) {
@@ -825,6 +880,11 @@
             renderizarMatchColumns(BLOQUES[bloqueActualIndex]);
             actualizarContadorReactivosBloque();
         }
+
+        window.addEventListener('resize', () => {
+            const bloque = BLOQUES[bloqueActualIndex];
+            if (bloque) dibujarLineasMatch(bloque);
+        });
 
         // 5. Contadores del Bloque
         function actualizarContadorReactivosBloque() {
