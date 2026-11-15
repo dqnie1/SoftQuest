@@ -1,0 +1,528 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SoftQuest · CU-09 Resolver crucigrama</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'crucigramaStyle.css' %}">
+  <style>
+    :root{--p:#5b5cf0;--p2:#eef0ff;--bg:#eef1f6;--ink:#1e2235;--mut:#6b7390;--ok:#10b981;--bad:#ef4444;--line:#e3e7ef}
+    *{box-sizing:border-box;margin:0}
+    body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#d9deea;color:var(--ink)}
+    button{font-family:inherit;cursor:pointer}
+    .screen{position:relative;min-height:100vh;background:var(--bg)}
+    header{background:#fff;border-bottom:1px solid var(--line);padding:14px 28px;display:flex;align-items:center;gap:16px}
+    .logo{font-weight:800;font-size:20px;color:var(--p)}
+    .lbl{font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--mut)}
+    .bar{flex:1;max-width:240px;height:8px;background:#e5e8f0;border-radius:99px;overflow:hidden}
+    .bar i{display:block;height:100%;background:var(--ok);border-radius:99px;transition:width .3s}
+    .chip{background:var(--ok);color:#fff;font-size:12px;font-weight:800;padding:3px 10px;border-radius:99px}
+    .back{margin-left:auto;border:1px solid #d5dbe8;background:#fff;color:var(--mut);font-weight:700;font-size:13px;padding:9px 16px;border-radius:10px}
+    main{max-width:1060px;margin:26px auto;padding:0 20px 20px;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:22px;align-items:start}
+    main.one{grid-template-columns:minmax(0,720px);justify-content:center}
+    @media(max-width:900px){main{grid-template-columns:1fr}}
+    .banner{background:linear-gradient(90deg,#5b5cf0,#6d6ef5);color:#fff;border-radius:16px;padding:18px 22px;display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:700;box-shadow:0 8px 20px rgba(91,92,240,.25)}
+    .banner span{background:rgba(255,255,255,.22);font-size:11px;font-weight:800;letter-spacing:.04em;padding:6px 12px;border-radius:99px;white-space:nowrap}
+    .card{background:#fff;border-radius:20px;padding:20px;box-shadow:0 4px 18px rgba(30,34,53,.06);margin-top:14px}
+    .active{background:#f7f8fc;border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:13px;font-weight:600;color:var(--mut);margin-bottom:12px}
+    .active b{color:var(--p)}
+    .toast{border-radius:12px;padding:10px 14px;font-size:13px;font-weight:700;margin-bottom:12px}
+    .toast.bad{background:#fee2e2;color:#b91c1c;border:1px solid #fecaca}
+    .toast.warn{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
+    .scroll{overflow-x:auto}
+    .grid{display:grid;gap:3px;justify-content:center;min-width:430px}
+    .e{width:40px;height:40px}
+    .c{width:40px;height:40px;position:relative;border:1.5px solid #cfd6e4;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;color:var(--p);cursor:pointer;user-select:none}
+    .c small{position:absolute;top:2px;left:4px;font-size:9px;font-weight:800;color:var(--mut)}
+    .c.sel{background:var(--p2);border-color:#a5a6f8}
+    .c.cur{background:#dfe2ff;border-color:var(--p);box-shadow:0 0 0 3px rgba(91,92,240,.2)}
+    .c.ok{background:#d1fae5;border-color:#6ee7b7;color:#047857}
+    .c.bad{background:#fee2e2;border-color:#fca5a5;color:#b91c1c}
+    .c.warn{background:#fef3c7;border-color:#fcd34d;color:#92400e}
+    .c.hint{background:#fef9c3;border-color:#facc15;color:#a16207}
+    h2{font-size:22px;font-weight:800}
+    .sub{font-size:13px;color:var(--mut);margin:4px 0 14px}
+    .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .st{border-radius:14px;padding:12px;text-align:center;background:#f7f8fb;border:1px solid var(--line)}
+    .st label{display:block;font-size:10px;font-weight:800;letter-spacing:.05em;color:var(--mut)}
+    .st div{font-size:24px;font-weight:800;margin-top:2px}
+    .st.y{background:#fffbeb;border-color:#fde68a}.st.y div{color:#d97706}
+    .st.i{background:#f2f3ff;border-color:#dcdffd}.st.i div{color:var(--p)}
+    .heart{color:var(--bad);font-size:20px;letter-spacing:2px}.heart .x{color:#d3d8e4}
+    .t.stop{color:var(--bad)}
+    .hintbtn{width:100%;margin-top:12px;border:1px solid #d5dbe8;background:#fff;border-radius:12px;padding:11px;font-weight:700;color:var(--ink);font-size:14px}
+    .hintbtn:disabled{opacity:.45;cursor:not-allowed}
+    .cl h4{font-size:11px;font-weight:800;letter-spacing:.05em;color:var(--mut);margin:16px 0 6px}
+    .cl div{font-size:12.5px;line-height:1.4;padding:8px 10px;border-radius:10px;border:1px solid transparent;color:#3a4160;cursor:pointer}
+    .cl div b{color:var(--p);margin-right:4px}
+    .cl .act{background:var(--p2);border-color:#c7c8fb}
+    .cl .done{color:#9aa2b8;text-decoration:line-through}.cl .done b{color:var(--ok)}
+    .ov{position:fixed;inset:0;z-index:50;background:rgba(30,34,53,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:24px 16px}
+    .md{background:#fff;border-radius:26px;width:100%;max-width:520px;padding:26px;box-shadow:0 24px 60px rgba(0,0,0,.3);max-height:100%;overflow:auto}
+    .hd{display:flex;gap:14px;align-items:center}
+    .ic{width:48px;height:48px;border-radius:14px;background:var(--p2);color:var(--p);display:flex;align-items:center;justify-content:center;font-size:22px;flex:none}
+    .tag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.06em;padding:3px 9px;border-radius:99px;background:var(--p2);color:var(--p)}
+    .tag.g{background:#d1fae5;color:#047857}.tag.r{background:#fee2e2;color:#b91c1c}.tag.a{background:#fef3c7;color:#92400e}
+    .hd h3{font-size:21px;font-weight:800;margin-top:4px}
+    .ic.g{background:#d1fae5;color:#047857}.ic.r{background:#fee2e2;color:#b91c1c}.ic.a{background:#fef3c7;color:#92400e}
+    .md>p{font-size:14.5px;line-height:1.6;color:#3a4160;margin:18px 0}
+    .box{background:#f7f8fb;border:1px solid var(--line);border-radius:14px;padding:14px 16px;font-size:13px;line-height:1.6;color:#3a4160;margin-bottom:18px}
+    .box h5{font-size:12px;font-weight:800;letter-spacing:.04em;color:var(--ink);margin-bottom:6px}
+    .rv{max-height:250px;overflow:auto;padding:0}
+    .rv div{padding:10px 14px;border-bottom:1px solid var(--line);font-size:12.5px}
+    .rv div:last-child{border:0}
+    .rv b{color:var(--p);display:block;font-size:13px}
+    .rv .no b{color:var(--mut)}
+    .rv em{font-style:normal;font-size:10px;font-weight:800;background:#e5e8f0;color:var(--mut);padding:2px 7px;border-radius:99px;margin-left:6px}
+    .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+    .btns{display:flex;gap:10px}
+    .b{flex:1;border-radius:12px;padding:13px;font-weight:800;font-size:14px;border:1px solid #d5dbe8;background:#fff;color:var(--mut)}
+    .b.p{background:var(--p);border-color:var(--p);color:#fff}
+    .b.d{background:var(--bad);border-color:var(--bad);color:#fff}
+    .xp{display:inline-block;background:#fffbeb;border:1px solid #fde68a;color:#d97706;font-weight:800;font-size:12px;padding:3px 10px;border-radius:99px;margin-top:6px}
+    .skel{height:420px;border-radius:14px;background:repeating-linear-gradient(45deg,#f3f5f9,#f3f5f9 10px,#eaedf4 10px,#eaedf4 20px)}
+    .sim{position:fixed;left:14px;bottom:14px;z-index:60;background:#fff;border:1px solid #d5dbe8;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;color:var(--mut);display:flex;gap:8px;align-items:center;box-shadow:0 4px 14px rgba(0,0,0,.12)}
+  </style>
+</head>
+
+<body>
+  <div id="app"></div>
+  <input id="kb" autocomplete="off" autocapitalize="characters"
+    style="position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;font-size:16px">
+
+  <script>
+    /* ===== Datos del servidor (inyectados por Django) ===== */
+    const ACTIVIDAD_ID = {{ actividad.id }};
+    const URL_TEMARIO = "{{ url_temario }}";
+    const URL_FINALIZAR = "{% url 'crucigrama:finalizar' actividad.id %}";
+    const CSRF_TOKEN = "{{ csrf_token }}";
+    const PUNTAJE_PREVIO = {{ puntaje_previo }};
+
+    /* Datos del crucigrama desde el backend */
+    const CRUCIGRAMA_DATA = {{ crucigrama| safe }};
+    const ROWS = CRUCIGRAMA_DATA.filas;
+    const COLS = CRUCIGRAMA_DATA.columnas;
+    const TIME = CRUCIGRAMA_DATA.tiempo_limite_seg;
+
+    /* Preparar palabras en el formato interno */
+    const W = CRUCIGRAMA_DATA.palabras.map(p => ({
+      id: p.id,
+      num: p.numero,
+      d: p.direccion,
+      r: p.fila_inicio,
+      c: p.columna_inicio,
+      a: p.respuesta,
+      q: p.enunciado,
+      e: p.explicacion
+    }));
+
+    const TOTAL = W.length;
+    const XPW = 100 / TOTAL;
+
+    /* ===== Utilidades de cuadrícula ===== */
+    const K = (r, c) => r + ',' + c;
+    const cellsOf = w => [...w.a].map((ch, i) => ({
+      k: w.d === 'h' ? K(w.r, w.c + i) : K(w.r + i, w.c),
+      ch
+    }));
+
+    const num = {}, exists = new Set(), wordsAt = {};
+    W.forEach(w => {
+      num[K(w.r, w.c)] = w.num;
+      cellsOf(w).forEach(x => {
+        exists.add(x.k);
+        (wordsAt[x.k] = wordsAt[x.k] || []).push(w.id);
+      });
+    });
+
+    const dirTxt = w => w.d === 'h' ? 'Horizontal' : 'Vertical';
+    const mmss = t => String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0');
+    const fmt = x => Number.isInteger(x) ? x : x.toFixed(1);
+
+    /* ===== Estado ===== */
+    const app = document.getElementById('app'), kb = document.getElementById('kb');
+    const fresh = () => ({
+      noboard: false, solved: [], lives: 3, time: TIME, sel: null, cursor: null,
+      lastK: null, typed: {}, hint: {}, hintUsed: false, tried: {}, first: [],
+      ov: null, toast: null, flash: null, running: false, lost: 0, w: null
+    });
+    let S = { screen: 'game', done: null, ...fresh() }, tid = null;
+
+    const solvedMap = () => {
+      const m = {};
+      W.filter(w => S.solved.includes(w.id)).forEach(w =>
+        cellsOf(w).forEach(x => m[x.k] = x.ch)
+      );
+      return m;
+    };
+    const letter = (k, m) => m[k] || S.hint[k] || S.typed[k] || '';
+    const editable = (w, m) => cellsOf(w).filter(x => !m[x.k] && !S.hint[x.k]).map(x => x.k);
+    const canPlay = () => S.screen === 'game' && S.running && !S.ov && !S.flash && !S.noboard;
+
+    /* ===== Cronómetro (RN-60) ===== */
+    function startTimer() { stopTimer(); S.running = true; tid = setInterval(tick, 1000); }
+    function stopTimer() { clearInterval(tid); S.running = false; }
+    function tick() {
+      S.time--;
+      const t = document.getElementById('tm');
+      if (t) t.textContent = mmss(S.time);
+      if (S.time <= 0) { S.time = 0; stopTimer(); S.flash = null; S.ov = 'timeout'; render(); }
+    }
+
+    /* ===== Flujo del juego ===== */
+    function toMenu() { stopTimer(); window.location.href = URL_TEMARIO; }
+
+    function start() {
+      Object.assign(S, fresh(), { screen: 'game', noboard: true });
+      render();
+      setTimeout(() => {
+        if (S.screen !== 'game' || !S.noboard) return;
+        S.noboard = false;
+        S.ov = 'intro';
+        render();
+      }, 700);
+    }
+
+    function begin() { S.ov = null; S.time = TIME; startTimer(); render(); kb.focus({ preventScroll: true }); }
+    function retry() { Object.assign(S, fresh()); startTimer(); render(); kb.focus({ preventScroll: true }); }
+
+    /* Selección de palabra */
+    function select(id, k) {
+      S.sel = id;
+      const w = W.find(x => x.id === id);
+      const ed = editable(w, solvedMap());
+      S.cursor = ed.includes(k) ? k : (ed.find(x => !S.typed[x]) || ed[0] || null);
+      S.toast = null;
+    }
+
+    function cycle(dir) {
+      const un = W.filter(w => !S.solved.includes(w.id));
+      if (!un.length) return;
+      const i = un.findIndex(w => w.id === S.sel);
+      select(un[(i + dir + un.length) % un.length].id);
+      render();
+    }
+
+    /* Escritura de letras (RN-53, RN-54) */
+    function type(ch) {
+      if (!canPlay() || !S.sel) return;
+      const w = W.find(x => x.id === S.sel);
+      const ed = editable(w, solvedMap());
+      if (!ed.length) return;
+      const k = ed.includes(S.cursor) ? S.cursor : (ed.find(x => !S.typed[x]) || ed[0]);
+      S.typed[k] = ch;
+      S.cursor = ed.slice(ed.indexOf(k) + 1).find(x => !S.typed[x]) || ed.find(x => !S.typed[x]) || k;
+      check(w);
+      render();
+    }
+
+    function backspace() {
+      if (!canPlay() || !S.sel) return;
+      const w = W.find(x => x.id === S.sel);
+      const ed = editable(w, solvedMap());
+      let i = ed.includes(S.cursor) ? ed.indexOf(S.cursor) : ed.length;
+      if (!S.typed[ed[i]]) { i--; while (i >= 0 && !S.typed[ed[i]]) i--; }
+      if (i >= 0) { delete S.typed[ed[i]]; S.cursor = ed[i]; render(); }
+    }
+
+    /* Pista (RN-61) */
+    function useHint() {
+      if (!canPlay() || S.hintUsed || !S.sel) return;
+      const w = W.find(x => x.id === S.sel);
+      const ed = editable(w, solvedMap());
+      if (!ed.length) return;
+      const k = ed.find(x => !S.typed[x]) || ed[0];
+      S.hint[k] = w.a[cellsOf(w).findIndex(x => x.k === k)];
+      delete S.typed[k];
+      S.hintUsed = true;
+      const ed2 = editable(w, solvedMap());
+      S.cursor = ed2.find(x => !S.typed[x]) || ed2[0] || null;
+      check(w);
+      render();
+    }
+
+    /* Validación de palabra (RN-54, RN-55, RN-56, RN-57, RN-62) */
+    function check(w) {
+      const m = solvedMap(), str = cellsOf(w).map(x => letter(x.k, m)).join('');
+      if (str.length < w.a.length) return;
+
+      /* RN-53: normalizar (sin acentos, mayúsculas) */
+      const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+
+      if (norm(str) === norm(w.a)) {
+        /* RN-55: Palabra correcta, bloquear casillas */
+        S.solved.push(w.id);
+        cellsOf(w).forEach(x => delete S.typed[x.k]);
+        /* RN-64: primer intento otorga XP */
+        if (!(S.tried[w.id] || []).length) S.first.push(w.id);
+        S.w = w.id;
+        S.cursor = null;
+        /* RN-62: Mostrar explicación */
+        S.ov = 'explain';
+        if (S.solved.length === TOTAL) stopTimer();
+        return;
+      }
+
+      const arr = S.tried[w.id] = S.tried[w.id] || [];
+      let kind;
+
+      if (arr.includes(norm(str))) {
+        /* RN-57: intento repetido, no pierde vida */
+        kind = 'warn';
+        S.toast = ['warn', 'Ya habías intentado esa respuesta. No pierdes una vida; prueba con otra palabra.'];
+      } else {
+        /* RN-56: palabra incorrecta, pierde vida */
+        arr.push(norm(str));
+        kind = 'bad';
+        S.lives--;
+        S.lost++;
+        S.toast = ['bad', 'Palabra incorrecta. Perdiste una vida y se borrarán las casillas de esa palabra.'];
+        if (S.lives <= 0) stopTimer();
+      }
+
+      const fl = { id: w.id, kind };
+      S.flash = fl;
+      setTimeout(() => {
+        if (S.flash !== fl) return;
+        /* RN-56: borrar casillas que no pertenecen a palabra resuelta */
+        const ed = editable(w, solvedMap());
+        ed.forEach(k => delete S.typed[k]);
+        S.flash = null;
+        S.toast = null;
+        S.cursor = ed[0] || null;
+        /* RN-G03: sin vidas, crucigrama perdido */
+        if (S.lives <= 0 && !S.ov) S.ov = 'lost';
+        render();
+      }, 1300);
+    }
+
+    /* ===== Comunicación con backend ===== */
+    async function enviarResultado() {
+      try {
+        const response = await fetch(URL_FINALIZAR, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN,
+          },
+          body: JSON.stringify({
+            palabras_resueltas: S.solved.length,
+            palabras_primer_intento: S.first.length,
+            vidas_restantes: S.lives,
+            vidas_perdidas: S.lost,
+            tiempo_empleado: TIME - S.time,
+            completado: S.solved.length === TOTAL,
+          }),
+        });
+        return await response.json();
+      } catch (e) {
+        console.error('Error al enviar resultado:', e);
+        return null;
+      }
+    }
+
+    /* ===== Render ===== */
+    function review(all) {
+      return W.map(w => {
+        const ok = all || S.solved.includes(w.id);
+        return ok
+          ? `<div><b>${w.a}</b>${w.e}</div>`
+          : `<div class="no"><b>${w.num} ${dirTxt(w)} (${w.a.length} letras)<em>SIN RESOLVER</em></b>${w.q}</div>`;
+      }).join('');
+    }
+
+    function overlay() {
+      const used = mmss(TIME - S.time), xp = fmt(S.first.length * XPW);
+      const ew = W.find(w => w.id === (S.w || W[0].id));
+      const lostBtns = `<div class="btns"><button class="b" data-a="menu">Regresar al temario</button><button class="b p" data-a="retry">Reintentar actividad</button></div>`;
+
+      const O = {
+        intro: `<div class="hd"><div class="ic">▶</div><div><span class="tag">INSTRUCCIONES</span><h3>Resolver crucigrama</h3></div></div>
+     <p>Lee cada enunciado y escribe en la cuadrícula la palabra que describe. Las respuestas no se muestran: deduce el concepto a partir de su definición.</p>
+     <div class="box"><h5>💡 REGLAS DE LA ACTIVIDAD</h5>
+     • <b>3 vidas:</b> pierdes una cada vez que completas una palabra incorrecta.<br>
+     • <b>Cronómetro de ${mmss(TIME)}:</b> inicia al mostrarse la cuadrícula y no se puede pausar.<br>
+     • <b>1 pista:</b> revela una letra de la palabra seleccionada y no resta vidas.<br>
+     • <b>100 XP</b> en total; solo suman las palabras resueltas al primer intento.</div>
+     <button class="b p" style="width:100%" data-a="begin">¡Comenzar!</button>`,
+
+        explain: `<div class="hd"><div class="ic g">✓</div><div><span class="tag g">¡PALABRA CORRECTA!</span><h3>${ew.a}</h3></div></div>
+     <div class="box" style="margin-top:18px"><h5>EXPLICACIÓN DEL CONCEPTO</h5>${ew.e}</div>
+     <span class="xp">${S.first.includes(ew.id) ? '+' + fmt(XPW) + ' XP' : '+0 XP (no fue al primer intento)'}</span><div style="height:16px"></div>
+     <button class="b p" style="width:100%" data-a="cont">Continuar</button>`,
+
+        abandon: `<div class="hd"><div class="ic a">!</div><div><span class="tag a">SALIR DE LA ACTIVIDAD</span><h3>¿Seguro que quieres salir?</h3></div></div>
+     <p>Si sales ahora no se conservará el progreso de la actividad y quedará sin completar. El cronómetro sigue corriendo mientras decides.</p>
+     <div class="btns"><button class="b" data-a="cancel">Cancelar</button><button class="b d" data-a="menu">Salir</button></div>`,
+
+        review: `<div class="hd"><div class="ic g">★</div><div><span class="tag g">REPASO</span><h3>Repaso del crucigrama</h3></div></div>
+     <p>Estas son todas las palabras del crucigrama con su definición.</p>
+     <div class="box rv">${review(true)}</div>
+     <div class="tiles"><div class="st"><label>VIDAS PERDIDAS</label><div>${S.lost}</div></div><div class="st"><label>TIEMPO EMPLEADO</label><div>${used}</div></div></div>
+     <button class="b p" style="width:100%" data-a="toresults">Ver resultados</button>`,
+
+        results: `<div class="hd"><div class="ic g">🏅</div><div><span class="tag g">¡ACTIVIDAD COMPLETADA!</span><h3>¡Excelente trabajo!</h3></div></div>
+     <p>Resolviste el crucigrama de ${CRUCIGRAMA_DATA.palabras[0] ? '«' + '{{ actividad.titulo }}' + '»' : 'la actividad'}. Tu resultado quedó registrado.</p>
+     <div class="tiles"><div class="st y"><label>PUNTAJE XP</label><div>${xp}</div></div><div class="st i"><label>PALABRAS RESUELTAS</label><div>${S.solved.length}/${TOTAL}</div></div>
+     <div class="st"><label>VIDAS PERDIDAS</label><div>${S.lost}</div></div><div class="st"><label>TIEMPO TOTAL</label><div>${used}</div></div></div>
+     <div class="box"><h5>SIGUIENTE ACTIVIDAD HABILITADA</h5>El progreso del mundo se actualizó y ya puedes continuar con la siguiente actividad del temario.</div>
+     <div class="btns"><button class="b" data-a="menu">Volver al temario</button><button class="b p" data-a="menu">Continuar</button></div>`,
+
+        lost: `<div class="hd"><div class="ic r">♥</div><div><span class="tag r">CRUCIGRAMA PERDIDO</span><h3>Te quedaste sin vidas</h3></div></div>
+     <p>Repasa los conceptos: las palabras resueltas muestran su definición y las pendientes solo su enunciado.</p>
+     <div class="box rv">${review(false)}</div>${lostBtns}`,
+
+        timeout: `<div class="hd"><div class="ic r">⏱</div><div><span class="tag r">TIEMPO AGOTADO</span><h3>Se acabó el tiempo</h3></div></div>
+     <p>El cronómetro llegó a cero y el crucigrama se perdió. Repasa los conceptos antes de reintentar.</p>
+     <div class="box rv">${review(false)}</div>${lostBtns}`,
+      };
+      return `<div class="ov"><div class="md">${O[S.ov]}</div></div>`;
+    }
+
+    function game() {
+      const m = solvedMap();
+      const sw = W.find(w => w.id === S.sel);
+      const selKeys = sw ? cellsOf(sw).map(x => x.k) : [];
+      const cur = S.cursor && selKeys.includes(S.cursor) ? S.cursor : null;
+      const fk = S.flash ? cellsOf(W.find(w => w.id === S.flash.id)).map(x => x.k) : [];
+
+      let g = '';
+      for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+        const k = K(r, c);
+        if (!exists.has(k)) { g += '<div class="e"></div>'; continue; }
+        let cls = 'c', ch = '';
+        if (selKeys.includes(k)) cls += ' sel';
+        if (k === cur) cls += ' cur';
+        if (m[k]) { cls += ' ok'; ch = m[k]; }
+        else if (S.hint[k]) { cls += ' hint'; ch = S.hint[k]; }
+        else if (S.typed[k]) { ch = S.typed[k]; if (fk.includes(k)) cls += ' ' + S.flash.kind; }
+        g += `<div class="${cls}" data-a="cell" data-k="${k}">${num[k] ? `<small>${num[k]}</small>` : ''}${ch}</div>`;
+      }
+
+      const clue = w => `<div data-a="clue" data-id="${w.id}" class="${S.solved.includes(w.id) ? 'done' : ''} ${S.sel === w.id ? 'act' : ''}"><b>${w.num}.</b>${w.q} <span style="color:#9aa2b8">(${w.a.length})</span></div>`;
+      const hearts = [0, 1, 2].map(i => i < S.lives ? '♥' : '<span class="x">♥</span>').join('');
+      const act = sw
+        ? `<b>${sw.num} ${dirTxt(sw)}</b> · ${sw.a.length} letras — ${sw.q}`
+        : 'Selecciona una casilla o un enunciado para comenzar.';
+
+      const body = S.noboard ? `<div class="skel"></div>` : `
+    <div class="active">${act}</div>
+    ${S.toast ? `<div class="toast ${S.toast[0]}">${S.toast[1]}</div>` : ''}
+    <div class="scroll"><div class="grid" style="grid-template-columns:repeat(${COLS},40px)">${g}</div></div>`;
+
+      return `<header><span class="logo">⚡ SoftQuest</span><span class="lbl">PROGRESO CRUCIGRAMA</span>
+   <div class="bar"><i style="width:${S.solved.length / TOTAL * 100}%"></i></div><span class="chip">${S.solved.length}/${TOTAL}</span>
+   <button class="back" data-a="back">← Volver al temario</button></header>
+   <main><section>
+     <div class="banner">{{ actividad.titulo }}<span>RESUELVE LOS ENUNCIADOS</span></div>
+     <div class="card">${body}</div>
+   </section>
+   <aside class="card" style="margin-top:0">
+     <h2>⏱ CRUCIGRAMA</h2><p class="sub">Escribe la palabra que corresponde a cada enunciado.</p>
+     <div class="stats">
+       <div class="st"><label>VIDAS</label><div class="heart">${hearts}</div></div>
+       <div class="st"><label>TIEMPO</label><div class="t ${S.time === 0 ? 'stop' : ''}" id="tm">${mmss(S.time)}</div></div>
+       <div class="st i"><label>PROGRESO</label><div>${S.solved.length}/${TOTAL}</div></div>
+       <div class="st y"><label>PISTA</label><div>${S.hintUsed ? '0/1' : '1/1'}</div></div>
+     </div>
+     <button class="hintbtn" data-a="hint" ${S.hintUsed || !canPlay() || !S.sel || S.solved.includes(S.sel) ? 'disabled' : ''}>💡 ${S.hintUsed ? 'Pista usada' : 'Usar pista'}</button>
+     <div class="cl"><h4>HORIZONTALES</h4>${W.filter(w => w.d === 'h').map(clue).join('')}
+     <h4>VERTICALES</h4>${W.filter(w => w.d === 'v').map(clue).join('')}</div>
+   </aside></main>`;
+    }
+
+    function render() {
+      app.innerHTML = `<div class="screen">${game()}${S.ov ? overlay() : ''}</div>`;
+    }
+
+    /* ===== Eventos ===== */
+    app.addEventListener('click', e => {
+      const t = e.target.closest('[data-a]');
+      if (!t) return;
+      const a = t.dataset.a;
+
+      if (a === 'start') start();
+      else if (a === 'begin') begin();
+      else if (a === 'retry') retry();
+      else if (a === 'menu') toMenu();
+      else if (a === 'back') { if (S.running && !S.ov) { S.ov = 'abandon'; render(); } else { toMenu(); } }
+      else if (a === 'cancel') { S.ov = null; render(); kb.focus({ preventScroll: true }); }
+      else if (a === 'cont') {
+        if (S.solved.length === TOTAL) {
+          S.ov = 'review';
+        } else {
+          S.ov = null;
+        }
+        render();
+        kb.focus({ preventScroll: true });
+      }
+      else if (a === 'toresults') {
+        /* Enviar resultado al backend */
+        enviarResultado().then(data => {
+          S.done = { xp: S.first.length * XPW, time: TIME - S.time };
+          S.ov = 'results';
+          render();
+        });
+      }
+      else if (a === 'hint') useHint();
+      else if (a === 'clue') {
+        if (!canPlay()) return;
+        S.lastK = null;
+        select(+t.dataset.id);
+        render();
+        kb.focus({ preventScroll: true });
+      }
+      else if (a === 'cell') {
+        if (!canPlay()) return;
+        const k = t.dataset.k, ids = wordsAt[k];
+        let id = ids.find(x => !S.solved.includes(x)) || ids[0];
+        if (ids.length > 1 && ids.includes(S.sel) && S.lastK === k) id = ids.find(x => x !== S.sel);
+        S.lastK = k;
+        select(id, k);
+        render();
+        kb.focus({ preventScroll: true });
+      }
+    });
+
+    /* Normalización de tecla */
+    const norm = s => {
+      if (s.length !== 1) return '';
+      const c = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+      return /^[A-Z]$/.test(c) ? c : '';
+    };
+
+    document.addEventListener('keydown', e => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === 'Backspace') { if (canPlay()) { e.preventDefault(); backspace(); } return; }
+      if (e.key === 'Tab' && canPlay()) { e.preventDefault(); cycle(e.shiftKey ? -1 : 1); return; }
+      if (document.activeElement === kb) return;
+      const ch = norm(e.key);
+      if (ch) type(ch);
+    });
+
+    kb.addEventListener('input', () => {
+      const v = kb.value;
+      kb.value = '';
+      [...v].forEach(c => { const ch = norm(c); if (ch) type(ch); });
+    });
+
+    /* Enviar resultado en derrota también (lost / timeout) */
+    app.addEventListener('click', e => {
+      const t = e.target.closest('[data-a]');
+      if (!t) return;
+      const a = t.dataset.a;
+      if ((a === 'menu' || a === 'retry') && (S.ov === 'lost' || S.ov === 'timeout')) {
+        enviarResultado();
+      }
+    });
+
+    /* Iniciar */
+    start();
+  </script>
+</body>
+
+</html>

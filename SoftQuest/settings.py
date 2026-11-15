@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     'minijuegos.cubecode',
     'minijuegos.examen',
     'minijuegos.ahorcado',
+    'minijuegos.crucigrama',
     'contenido', # exploracion de mundos y temarios
     'login',
 ]
@@ -99,6 +100,7 @@ TEMPLATES = [
             BASE_DIR / 'minijuegos' / 'pacman' / 'templates',
             BASE_DIR / 'minijuegos' / 'examen' / 'template',
             BASE_DIR / 'minijuegos' / 'ahorcado' / 'template',
+            BASE_DIR / 'minijuegos' / 'crucigrama' / 'templates',
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -188,6 +190,8 @@ STATICFILES_DIRS = [
     BASE_DIR / 'minijuegos' / 'snake' / 'templates' / 'style',
     BASE_DIR / 'minijuegos' / 'cubecode' / 'static',
     BASE_DIR / 'minijuegos' / 'ahorcado' / 'template' / 'styles',
+    BASE_DIR / 'minijuegos' / 'crucigrama' / 'templates' / 'style',
+    BASE_DIR / 'minijuegos' / 'crucigrama' / 'static',
 ]
 
 
