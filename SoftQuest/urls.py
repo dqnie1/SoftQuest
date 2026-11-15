@@ -20,6 +20,7 @@ urlpatterns = [
     path('cubecode/', include('minijuegos.cubecode.urls')),
     path('ninjacode/', include('minijuegos.ninjacode.urls')),
     path('examen/', include('minijuegos.examen.urls')), # url de examen CU-04
+    path('ahorcado/', include('minijuegos.ahorcado.urls')), # url de ahorcado CU-07
 ]
 
 # Servir archivos estaticos durante el desarrollo.
