@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'minijuegos.nave',
     'minijuegos.snake',
     'minijuegos.cubecode',
+    'minijuegos.ninjacode',
     'minijuegos.examen',
     'contenido', # exploracion de mundos y temarios
     'login',
@@ -185,6 +186,7 @@ STATICFILES_DIRS = [
     BASE_DIR / 'minijuegos' / 'pacman' / 'templates' / 'style',
     BASE_DIR / 'minijuegos' / 'snake' / 'templates' / 'style',
     BASE_DIR / 'minijuegos' / 'cubecode' / 'static',
+    BASE_DIR / 'minijuegos' / 'ninjacode' / 'static',
 ]
 
 
