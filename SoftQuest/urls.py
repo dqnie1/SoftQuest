@@ -18,6 +18,7 @@ urlpatterns = [
     path('nave/', include('minijuegos.nave.urls')), #url de minijuego nave espacial
     path('snake/', include('minijuegos.snake.urls')), #url de minijuego snake
     path('cubecode/', include('minijuegos.cubecode.urls')),
+    path('ninjacode/', include('minijuegos.ninjacode.urls')),
     path('examen/', include('minijuegos.examen.urls')), # url de examen CU-04
     path('ahorcado/', include('minijuegos.ahorcado.urls')), # url de ahorcado CU-07
     path('crucigrama/', include('minijuegos.crucigrama.urls')), # url de crucigrama CU-09
