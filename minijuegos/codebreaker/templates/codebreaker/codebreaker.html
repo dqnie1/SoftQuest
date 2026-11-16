@@ -1,0 +1,112 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>SoftQuest · CodeBreaker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'codebreaker/codebreaker.css' %}">
+</head>
+<body>
+<header class="hd">
+  <div class="lgw">
+    <a href="{{ url_temario }}" class="lg">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M13 2 4 14h6l-1 8 9-12h-6z"/>
+      </svg>
+      SoftQuest
+    </a>
+    <span class="wn">CodeBreaker</span>
+  </div>
+  <div class="hud" id="hud" hidden>
+    <div class="pg">
+      <span class="lb">Bloques</span>
+      <div class="bar"><i id="bar"></i></div>
+      <span class="pill" id="bc">0/60</span>
+    </div>
+    <div class="hc hr">
+      <span class="lb">Vidas</span>
+      <b id="lv">♥♥♥</b>
+    </div>
+    <div class="hc sf">
+      <span class="lb">Conceptos</span>
+      <b id="cc">0/8</b>
+    </div>
+    <div class="hc cr">
+      <span class="lb">XP</span>
+      <b id="xp">100</b>
+    </div>
+    <button class="ib" id="exit">Salir</button>
+  </div>
+</header>
+
+<main>
+  <!-- Sección Introducción (Paso 2 del flujo normal) -->
+  <section id="intro" class="card" style="max-width:600px;margin:0 auto">
+    <div class="bn">
+      <div class="bi">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="4" width="7" height="4" rx="1"/>
+          <rect x="14" y="4" width="7" height="4" rx="1"/>
+          <rect x="8" y="10" width="7" height="4" rx="1"/>
+          <path d="M6 20h12"/>
+        </svg>
+      </div>
+      <h1>CodeBreaker</h1>
+    </div>
+    <div class="bd">
+      <p>Destruye todos los bloques con la pelota. Los bloques con <strong>{ }</strong> esconden un concepto de Ingeniería de Software: atrapa su cápsula para aprenderlo y activar su efecto, que puede ayudarte o estorbarte.</p>
+      <div class="tips">
+        <div class="tip t1">
+          <b>1. Mueve y lanza</b>
+          Paleta con mouse, toque o ← → / A D. Lanza con clic, toque o espacio.
+        </div>
+        <div class="tip t2">
+          <b>2. Atrapa cápsulas</b>
+          El juego se pausa y se explica el concepto. Hay 8: 6 ayudan y 2 estorban.
+        </div>
+        <div class="tip t3">
+          <b>3. Cuida tus vidas</b>
+          Tienes 3 vidas y 100 XP. Cada vida perdida resta 10 XP. Ningún efecto da vidas.
+        </div>
+      </div>
+      <button class="btn" id="go0">Iniciar actividad</button>
+    </div>
+  </section>
+
+  <!-- Sección Tablero de Juego (Paso 4 del flujo normal) -->
+  <section id="game" hidden>
+    <div class="play">
+      <div>
+        <canvas id="cv" width="640" height="480" aria-label="Tablero de CodeBreaker"></canvas>
+        <div class="fxs" id="fxs"></div>
+        <p class="msg" id="msg" role="status" aria-live="polite"></p>
+      </div>
+      <div>
+        <span class="lb" style="display:block;margin-bottom:8px">Conceptos recolectados</span>
+        <ul class="defs" id="defs"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sección Resultados y Repaso (Paso 12 del flujo normal y Flujo 1.5) -->
+  <section id="end" hidden></section>
+</main>
+
+<!-- Modal de pausa pedagógica y confirmaciones -->
+<div id="ov" hidden>
+  <div class="card md" id="md" role="dialog" aria-modal="true"></div>
+</div>
+
+<script>
+  window.CONFIG_CODEBREAKER = {
+    conceptos: {{ conceptos_json|safe }},
+    urlFinalizar: "{{ url_finalizar }}",
+    urlTemario: "{{ url_temario }}",
+    csrfToken: "{{ csrf_token }}"
+  };
+</script>
+<script src="{% static 'codebreaker/codebreaker.js' %}"></script>
+</body>
+</html>

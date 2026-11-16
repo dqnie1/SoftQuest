@@ -69,6 +69,7 @@ INSTALLED_APPS = [
     'minijuegos.examen',
     'minijuegos.ahorcado',
     'minijuegos.crucigrama',
+    'minijuegos.codebreaker',
     'contenido', # exploracion de mundos y temarios
     'login',
 ]

@@ -22,6 +22,7 @@ urlpatterns = [
     path('examen/', include('minijuegos.examen.urls')), # url de examen CU-04
     path('ahorcado/', include('minijuegos.ahorcado.urls')), # url de ahorcado CU-07
     path('crucigrama/', include('minijuegos.crucigrama.urls')), # url de crucigrama CU-09
+    path('codebreaker/', include('minijuegos.codebreaker.urls')), # url de codebreaker CU-11
 ]
 
 # Servir archivos estaticos durante el desarrollo.
