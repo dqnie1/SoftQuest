@@ -1,0 +1,105 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>SoftQuest · Sopa de letras</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'sopaletras/sopaletras.css' %}">
+</head>
+<body>
+<header class="hd">
+  <div class="lgw">
+    <a href="{{ url_temario }}" class="lg">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M13 2 4 14h6l-1 8 9-12h-6z"/>
+      </svg>
+      SoftQuest
+    </a>
+    <span class="wn">Sopa de letras</span>
+  </div>
+  <div class="hud" id="hud" hidden>
+    <div class="pg">
+      <span class="lb">Progreso</span>
+      <div class="bar"><i id="bar"></i></div>
+      <span class="pill" id="fc">0/8</span>
+    </div>
+    <div class="hc cr">
+      <span class="lb">XP</span>
+      <b id="xp">100</b>
+    </div>
+    <div class="hc sf">
+      <span class="lb">Tiempo</span>
+      <b id="tm">00:00</b>
+    </div>
+    <div class="hc">
+      <span class="lb">Errores</span>
+      <b id="er">0</b>
+    </div>
+    <button class="ib" id="hint">Pista</button>
+    <button class="ib" id="exit">Salir</button>
+  </div>
+</header>
+
+<main>
+  <!-- Sección Introducción (Paso 2 del flujo normal) -->
+  <section id="intro" class="card" style="max-width:600px;margin:0 auto">
+    <div class="bn">
+      <div class="bi">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+          <circle cx="10.5" cy="10.5" r="6.5"/>
+          <path d="m20 20-4.8-4.8"/>
+        </svg>
+      </div>
+      <h1>Sopa de letras</h1>
+    </div>
+    <div class="bd">
+      <p>Cada definición esconde un concepto de Ingeniería de Software dentro de la cuadrícula. Elige una definición, encuentra su palabra arrastrando sobre las letras y aprende cómo se usa en un proyecto real.</p>
+      <div class="tips">
+        <div class="tip t1">
+          <b>1. Elige</b>
+          Selecciona una definición de la lista.
+        </div>
+        <div class="tip t2">
+          <b>2. Arrastra</b>
+          Marca la palabra en horizontal, vertical o diagonal. Cada acierto la une a su definición con un color.
+        </div>
+        <div class="tip t3">
+          <b>3. Cuida tus errores</b>
+          No hay vidas, pero cada error resta 5 XP de 100. Tienes una pista.
+        </div>
+      </div>
+      <button class="btn" id="go0">Iniciar actividad</button>
+    </div>
+  </section>
+
+  <!-- Sección Tablero de Juego (Paso 4 del flujo normal) -->
+  <section id="game" hidden>
+    <div class="play">
+      <div id="grid" aria-label="Cuadrícula de letras"></div>
+      <ul class="defs" id="defs"></ul>
+    </div>
+    <p class="msg" id="msg" role="status" aria-live="polite"></p>
+  </section>
+
+  <!-- Sección Resultados y Repaso (Paso 11 del flujo normal) -->
+  <section id="end" hidden></section>
+</main>
+
+<!-- Modal de pausa pedagógica y confirmaciones -->
+<div id="ov" hidden>
+  <div class="card md" id="md" role="dialog" aria-modal="true"></div>
+</div>
+
+<script>
+  window.CONFIG_SOPALETRAS = {
+    palabras: {{ palabras_json|safe }},
+    urlFinalizar: "{{ url_finalizar }}",
+    urlTemario: "{{ url_temario }}",
+    csrfToken: "{{ csrf_token }}"
+  };
+</script>
+<script src="{% static 'sopaletras/sopaletras.js' %}"></script>
+</body>
+</html>
