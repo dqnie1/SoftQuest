@@ -42,8 +42,9 @@ def mapa_mundos(request):
             mundo.estado = 'completado'
             mundos_completados += 1
         else:
-            # Temporal para la presentación: el mundo se puede abrir aunque el anterior no esté completo.
-            mundo.estado = 'en_curso'
+            mundo.estado = 'bloqueado'
+            mundo.prereq = Mundo.objects.filter(orden__lt=mundo.orden).order_by('-orden').first()
+            
 
     from contenido.models import InsigniaUsuario
     insignias_count = InsigniaUsuario.objects.filter(usuario=usuario).count()
