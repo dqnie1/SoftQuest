@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ahorcado · SoftQuest</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'ahorcado.css' %}">
+</head>
+<body>
+    <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
+
+    <!-- Barra Superior de Navegación -->
+    <header class="barra-superior">
+        <div class="barra-izquierda">
+            <span class="progreso-label">PROGRESO</span>
+            <div class="progreso-track">
+                <div class="progreso-fill" id="progreso-fill" style="width: 50%;"></div>
+            </div>
+            <span class="progreso-pill" id="progreso-pill">{{ contenido.nivel_actual|default:1 }}/{{ contenido.total_actividades|default:2 }}</span>
+            <button type="button" class="btn-salir" onclick="salirDirecto()">Salir</button>
+        </div>
+
+        <div class="barra-derecha">
+            <span class="brand-bolt">⚡</span>
+            <span class="brand-name">SoftQuest</span>
+        </div>
+    </header>
+
+    {% if error %}
+    <!-- Excepción 1.0.E1: Error de carga o BD sin palabras -->
+    <main class="juego-contenedor">
+        <div class="tarjeta-error">
+            <div style="font-size: 3rem;">⚠️</div>
+            <h2>No fue posible cargar la actividad</h2>
+            <p>{{ mensaje_error|default:"Ocurrió un error inesperado al consultar la base de datos o no se encontraron palabras configuradas para este ahorcado." }}</p>
+            <a href="{{ url_temario }}" class="btn-modal btn-modal-primario">Regresar al temario</a>
+        </div>
+    </main>
+    {% else %}
+
+    <!-- Contenedor Principal del Juego -->
+    <main class="juego-contenedor">
+        <!-- Columna Izquierda: Banner + Tarjetas (Instrucciones o Juego) -->
+        <div class="columna-principal">
+            <!-- Banner Naranja / Ámbar -->
+            <div class="banner-ahorcado">
+                <span class="banner-sub">AHORCADO · NIVEL {{ contenido.nivel_actual|default:1 }} DE {{ contenido.total_actividades|default:2 }}</span>
+                <h1 class="banner-titulo">{{ actividad.titulo|default:"Ahorcado" }}</h1>
+                <p class="banner-desc">{{ contenido.temario_nombre|default:"Requerimientos de Software" }}</p>
+            </div>
+
+            <!-- Tarjeta 1: Pantalla de Instrucciones (Paso 2 del flujo normal) -->
+            <div class="tarjeta-instrucciones" id="seccion-instrucciones">
+                <span class="instrucciones-label">INSTRUCCIONES</span>
+                <h2 class="instrucciones-titulo">Descubre la palabra oculta</h2>
+                <p class="instrucciones-desc">
+                    Elige letras para completar la palabra. Cada letra incorrecta agrega una parte al dibujo; tienes <strong class="texto-destacado">6 fallos</strong> posibles y <strong class="texto-destacado">3 pistas</strong>. Si completas la palabra ganas hasta <strong class="texto-destacado">100 XP</strong>.
+                </p>
+                <button type="button" class="btn-comenzar" id="btn-comenzar" onclick="iniciarPartida()">
+                    Comenzar
+                </button>
+            </div>
+
+            <!-- Tarjeta 2: Tablero Activo del Juego (Paso 3 en adelante) -->
+            <div class="tarjeta-juego" id="seccion-juego" style="display: none;">
+                <!-- Fila Superior: Horca SVG y Pista Actual -->
+                <div class="seccion-horca-pista">
+                    <div class="horca-wrap">
+                        <svg class="hangman-svg" viewBox="0 0 160 170">
+                            <!-- Horca fija moderna -->
+                            <line class="gallows-stroke" x1="15" y1="155" x2="95" y2="155" />
+                            <line class="gallows-stroke" x1="40" y1="155" x2="40" y2="25" />
+                            <line class="gallows-stroke" x1="40" y1="25" x2="120" y2="25" />
+                            <line class="rope-stroke" x1="120" y1="25" x2="120" y2="50" />
+
+                            <!-- 6 Partes del Cuerpo (ocultas inicialmente) -->
+                            <!-- 1. Cabeza -->
+                            <circle id="part-cabeza" class="body-stroke hidden" cx="120" cy="65" r="15" />
+                            <!-- 2. Tronco -->
+                            <line id="part-tronco" class="body-stroke hidden" x1="120" y1="80" x2="120" y2="115" />
+                            <!-- 3. Brazo izquierdo -->
+                            <line id="part-brazo-izq" class="body-stroke hidden" x1="120" y1="90" x2="100" y2="105" />
+                            <!-- 4. Brazo derecho -->
+                            <line id="part-brazo-der" class="body-stroke hidden" x1="120" y1="90" x2="140" y2="105" />
+                            <!-- 5. Pierna izquierda -->
+                            <line id="part-pierna-izq" class="body-stroke hidden" x1="120" y1="115" x2="100" y2="140" />
+                            <!-- 6. Pierna derecha -->
+                            <line id="part-pierna-der" class="body-stroke hidden" x1="120" y1="115" x2="140" y2="140" />
+                        </svg>
+                    </div>
+
+                    <!-- Caja con la ÚLTIMA PISTA SOLICITADA -->
+                    <div class="caja-pista-actual">
+                        <span class="pista-etiqueta" id="pista-label">PISTA INICIAL</span>
+                        <p class="pista-texto" id="pista-contenido">Cargando partida...</p>
+                    </div>
+                </div>
+
+                <!-- Fila Central: Tablero de Ranuras de Letras -->
+                <div class="tablero-letras" id="board-slots">
+                    <!-- Generadas dinámicamente -->
+                </div>
+
+                <!-- Teclado Virtual de 3 Filas: A-J, K-S, T-Z -->
+                <div class="teclado-virtual" id="virtual-keyboard">
+                    <div class="fila-teclado" id="kb-row-1"></div>
+                    <div class="fila-teclado" id="kb-row-2"></div>
+                    <div class="fila-teclado" id="kb-row-3"></div>
+                </div>
+
+                <!-- Pie de Tarjeta: Fallos restantes y Botón Pedir Pista -->
+                <div class="pie-tarjeta-juego">
+                    <span class="fallos-texto" id="fallos-restantes-texto">Fallos restantes: 6</span>
+                    <button type="button" class="btn-pedir-pista" id="btn-pedir-pista" onclick="solicitarPista()">
+                        💡 Pedir pista
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Tarjeta de ESTADO (siempre visible según diseño) -->
+        <aside class="columna-estado">
+            <div class="tarjeta-estado">
+                <h2 class="estado-titulo">ESTADO</h2>
+
+                <!-- Puntaje -->
+                <div class="estado-caja estado-caja--puntaje">
+                    <span class="caja-subtitulo">PUNTAJE</span>
+                    <span class="puntaje-valor" id="estado-puntaje">0</span>
+                </div>
+
+                <!-- Vidas (6 Corazones) -->
+                <div class="estado-caja">
+                    <span class="caja-subtitulo">VIDAS</span>
+                    <div class="corazones-wrap" id="estado-vidas">
+                        <span class="corazon" id="vida-1">❤️</span>
+                        <span class="corazon" id="vida-2">❤️</span>
+                        <span class="corazon" id="vida-3">❤️</span>
+                        <span class="corazon" id="vida-4">❤️</span>
+                        <span class="corazon" id="vida-5">❤️</span>
+                        <span class="corazon" id="vida-6">❤️</span>
+                    </div>
+                </div>
+
+                <!-- Pistas Disponibles (3 Puntos Azules) -->
+                <div class="estado-caja">
+                    <span class="caja-subtitulo" id="estado-pistas-label">Pistas: 3 de 3</span>
+                    <div class="pistas-dots-wrap" id="estado-pistas-dots">
+                        <span class="pista-dot" id="pista-dot-1"></span>
+                        <span class="pista-dot" id="pista-dot-2"></span>
+                        <span class="pista-dot" id="pista-dot-3"></span>
+                    </div>
+                </div>
+
+                <!-- Letras Falladas -->
+                <div class="estado-caja">
+                    <span class="caja-subtitulo">Letras falladas</span>
+                    <span class="letras-falladas-valor" id="estado-letras-falladas">Ninguna</span>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Modal de Fin de Partida (Victoria / Derrota) -->
+    <div class="modal-overlay" id="modal-fin-partida">
+        <div class="modal-card">
+            <div class="modal-icono" id="fin-icono">🏆</div>
+            <h3 id="fin-titulo">¡Felicidades!</h3>
+            <p id="fin-descripcion">Has descubierto la palabra con éxito.</p>
+            
+            <div id="fin-palabra-wrap" style="display: none;">
+                <p style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.25rem;">La palabra era:</p>
+                <div class="palabra-revelada-caja" id="fin-palabra-revelada"></div>
+            </div>
+
+            <div class="score-badge-victoria" id="fin-puntaje">+100 XP</div>
+
+            <div class="modal-acciones">
+                <a href="{{ url_temario }}" class="btn-modal btn-modal-cancelar">Volver al Temario</a>
+                <a href="#" class="btn-modal btn-modal-primario" id="btn-siguiente-actividad" style="display: none;">Siguiente actividad</a>
+                <button type="button" class="btn-modal btn-modal-primario" id="btn-reintentar" style="display: none;" onclick="reiniciarPartida()">Reintentar</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Lógica de Presentación (AhorcadoTemplate JS) -->
+    <script>
+        const actividadId = {{ contenido.actividad_id|default:"null" }};
+        const urlTemario = "{{ url_temario|default:'/' }}";
+        const csrfToken = document.getElementById('csrf-token')?.value || '';
+
+        // 6 partes del ahorcado (en orden de fallos)
+        const partesCuerpo = [
+            'part-cabeza',
+            'part-tronco',
+            'part-brazo-izq',
+            'part-brazo-der',
+            'part-pierna-izq',
+            'part-pierna-der'
+        ];
+
+        // Teclado exacto de 3 filas como en el diseño de referencia:
+        // Fila 1: A B C D E F G H I J (10 teclas)
+        // Fila 2: K L M N Ñ O P Q R S (10 teclas)
+        // Fila 3: T U V W X Y Z       (7 teclas)
+        const filasTeclado = [
+            ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'],
+            ['K', 'L', 'M', 'N', 'Ñ', 'O', 'P', 'Q', 'R', 'S'],
+            ['T', 'U', 'V', 'W', 'X', 'Y', 'Z']
+        ];
+
+        let partidaIniciada = false;
+        let partidaTerminada = false;
+
+        // Construir Teclado Virtual
+        function inicializarTeclado() {
+            filasTeclado.forEach((fila, idx) => {
+                const contenedorFila = document.getElementById(`kb-row-${idx + 1}`);
+                if (!contenedorFila) return;
+                contenedorFila.innerHTML = '';
+                fila.forEach(letra => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'tecla-btn';
+                    btn.id = `tecla-${letra}`;
+                    btn.textContent = letra;
+                    btn.onclick = () => enviarLetra(letra);
+                    contenedorFila.appendChild(btn);
+                });
+            });
+        }
+
+        // Iniciar Partida al hacer clic en "Comenzar" (Paso 3 del flujo)
+        async function iniciarPartida() {
+            if (!actividadId) return;
+            const btnComenzar = document.getElementById('btn-comenzar');
+            if (btnComenzar) btnComenzar.disabled = true;
+
+            try {
+                const res = await fetch('/ahorcado/iniciar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ actividad_id: actividadId })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    partidaIniciada = true;
+                    partidaTerminada = false;
+
+                    // Intercambiar tarjeta de instrucciones por la tarjeta activa de juego
+                    document.getElementById('seccion-instrucciones').style.display = 'none';
+                    document.getElementById('seccion-juego').style.display = 'flex';
+
+                    inicializarTeclado();
+
+                    // Ocultar dibujo del ahorcado
+                    partesCuerpo.forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.className.baseVal = 'body-stroke hidden';
+                    });
+
+                    // Mostrar Pista Inicial en la caja
+                    document.getElementById('pista-label').textContent = data.pista_label || 'PISTA INICIAL';
+                    document.getElementById('pista-contenido').textContent = data.pista_texto || '';
+
+                    actualizarTablero(data.estado_tablero);
+                    actualizarEstadoLateral(data.fallos_restantes, data.pistas_restantes, data.letras_falladas, data.puntaje);
+
+                    // Marcar letras expuestas en verde
+                    if (data.letras_usadas && Array.isArray(data.letras_usadas)) {
+                        data.letras_usadas.forEach(letra => {
+                            const btn = document.getElementById(`tecla-${letra}`);
+                            if (btn) {
+                                btn.classList.add('correcta');
+                                btn.disabled = true;
+                            }
+                        });
+                    }
+                } else {
+                    alert(data.mensaje || 'Error al iniciar la partida');
+                    if (btnComenzar) btnComenzar.disabled = false;
+                }
+            } catch (err) {
+                console.error('Error al iniciar la partida:', err);
+                if (btnComenzar) btnComenzar.disabled = false;
+            }
+        }
+
+        // Renderizar Tablero de Ranuras de Letras
+        function actualizarTablero(letras) {
+            const board = document.getElementById('board-slots');
+            if (!board || !letras) return;
+            board.innerHTML = '';
+
+            letras.forEach(ch => {
+                const slot = document.createElement('div');
+                if (ch === ' ') {
+                    slot.className = 'slot-letra espacio';
+                } else if (ch !== '_') {
+                    slot.className = 'slot-letra';
+                    slot.textContent = ch;
+                } else {
+                    slot.className = 'slot-letra';
+                    slot.textContent = '';
+                }
+                board.appendChild(slot);
+            });
+        }
+
+        // Actualizar Panel Lateral de ESTADO y Contadores
+        function actualizarEstadoLateral(fallosRestantes, pistasRestantes, letrasFalladas, puntaje) {
+            // 1. Puntaje
+            const puntajeEl = document.getElementById('estado-puntaje');
+            if (puntajeEl && puntaje !== undefined) {
+                puntajeEl.textContent = puntaje;
+            }
+
+            // 2. Vidas (6 Corazones)
+            for (let i = 1; i <= 6; i++) {
+                const corazon = document.getElementById(`vida-${i}`);
+                if (corazon) {
+                    if (i <= fallosRestantes) {
+                        corazon.className = 'corazon';
+                    } else {
+                        corazon.className = 'corazon perdido';
+                    }
+                }
+            }
+
+            // Fallos restantes texto inferior
+            const fallosTexto = document.getElementById('fallos-restantes-texto');
+            if (fallosTexto) {
+                fallosTexto.textContent = `Fallos restantes: ${fallosRestantes}`;
+            }
+
+            // Partes del cuerpo en el SVG
+            const fallosCometidos = 6 - fallosRestantes;
+            partesCuerpo.forEach((id, idx) => {
+                const el = document.getElementById(id);
+                if (el) {
+                    if (idx < fallosCometidos) {
+                        el.className.baseVal = 'body-stroke visible';
+                    } else {
+                        el.className.baseVal = 'body-stroke hidden';
+                    }
+                }
+            });
+
+            // 3. Pistas (Puntos Azules)
+            const pistasLabel = document.getElementById('estado-pistas-label');
+            if (pistasLabel) {
+                pistasLabel.textContent = `Pistas: ${pistasRestantes} de 3`;
+            }
+
+            for (let j = 1; j <= 3; j++) {
+                const dot = document.getElementById(`pista-dot-${j}`);
+                if (dot) {
+                    if (j <= pistasRestantes) {
+                        dot.className = 'pista-dot';
+                    } else {
+                        dot.className = 'pista-dot usado';
+                    }
+                }
+            }
+
+            // 4. Letras Falladas
+            const falladasEl = document.getElementById('estado-letras-falladas');
+            if (falladasEl) {
+                if (!letrasFalladas || letrasFalladas.length === 0) {
+                    falladasEl.textContent = 'Ninguna';
+                    falladasEl.className = 'letras-falladas-valor';
+                } else {
+                    falladasEl.textContent = letrasFalladas.join(', ');
+                    falladasEl.className = 'letras-falladas-valor con-letras';
+                }
+            }
+        }
+
+        // Validar Letra (POST /ahorcado/letra)
+        async function enviarLetra(letra) {
+            if (!partidaIniciada || partidaTerminada) return;
+
+            const btn = document.getElementById(`tecla-${letra}`);
+            if (btn && btn.disabled) return;
+
+            try {
+                const res = await fetch('/ahorcado/letra', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({
+                        actividad_id: actividadId,
+                        ahorcado_id: actividadId,
+                        letra: letra
+                    })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    actualizarTablero(data.estado_tablero);
+                    actualizarEstadoLateral(data.fallos_restantes, data.pistas_restantes, data.letras_falladas, data.puntaje);
+
+                    if (btn) {
+                        btn.disabled = true;
+                        if (data.acierto) {
+                            btn.classList.add('correcta');
+                        } else {
+                            btn.classList.add('fallada');
+                        }
+                    }
+
+                    if (data.completada) {
+                        partidaTerminada = true;
+                        if (data.gano) {
+                            mostrarModalVictoria(data);
+                        } else if (data.perdio) {
+                            mostrarModalDerrota(data);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Error al validar letra:', err);
+            }
+        }
+
+        // Solicitar Pista (POST /ahorcado/pista) con ciclo de pistas
+        async function solicitarPista() {
+            if (!partidaIniciada || partidaTerminada) return;
+
+            try {
+                const res = await fetch('/ahorcado/pista', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({
+                        actividad_id: actividadId,
+                        ahorcado_id: actividadId
+                    })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    // Actualizar la ÚNICA caja de pista en pantalla
+                    document.getElementById('pista-label').textContent = data.pista_label || 'PISTA';
+                    document.getElementById('pista-contenido').textContent = data.pista;
+
+                    actualizarEstadoLateral(data.fallos_restantes, data.pistas_restantes);
+                }
+            } catch (err) {
+                console.error('Error al solicitar pista:', err);
+            }
+        }
+
+        // Salida Directa (Sin confirmación)
+        async function salirDirecto() {
+            if (partidaIniciada && !partidaTerminada) {
+                try {
+                    const res = await fetch('/ahorcado/abandonar', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: JSON.stringify({ actividad_id: actividadId })
+                    });
+                    const data = await res.json();
+                    window.location.href = data.redirect_url || urlTemario;
+                } catch (err) {
+                    window.location.href = urlTemario;
+                }
+            } else {
+                window.location.href = urlTemario;
+            }
+        }
+
+        // Modales de Fin de Partida
+        function mostrarModalVictoria(data) {
+            document.getElementById('fin-icono').textContent = '🏆';
+            document.getElementById('fin-titulo').textContent = '¡Felicidades!';
+            document.getElementById('fin-descripcion').textContent = 'Has descubierto la palabra con éxito.';
+            document.getElementById('fin-palabra-wrap').style.display = 'none';
+            document.getElementById('fin-puntaje').textContent = `+${data.puntaje} XP`;
+
+            const btnSig = document.getElementById('btn-siguiente-actividad');
+            if (data.siguiente_url) {
+                btnSig.href = data.siguiente_url;
+                btnSig.style.display = 'inline-flex';
+            } else {
+                btnSig.style.display = 'none';
+            }
+
+            document.getElementById('btn-reintentar').style.display = 'none';
+            document.getElementById('modal-fin-partida').classList.add('active');
+        }
+
+        function mostrarModalDerrota(data) {
+            document.getElementById('fin-icono').textContent = '💀';
+            document.getElementById('fin-titulo').textContent = 'Partida Perdida';
+            document.getElementById('fin-descripcion').textContent = 'Se agotaron los 6 fallos permitidos.';
+            
+            document.getElementById('fin-palabra-wrap').style.display = 'block';
+            document.getElementById('fin-palabra-revelada').textContent = data.palabra_revelada || '';
+            document.getElementById('fin-puntaje').textContent = `${data.puntaje} XP`;
+
+            document.getElementById('btn-siguiente-actividad').style.display = 'none';
+            document.getElementById('btn-reintentar').style.display = 'inline-flex';
+            document.getElementById('modal-fin-partida').classList.add('active');
+        }
+
+        function reiniciarPartida() {
+            document.getElementById('modal-fin-partida').classList.remove('active');
+            iniciarPartida();
+        }
+
+        // Atajo de teclado físico
+        window.addEventListener('keydown', (e) => {
+            if (!partidaIniciada || partidaTerminada) return;
+            const letra = e.key.toUpperCase();
+            if ((letra >= 'A' && letra <= 'Z') || letra === 'Ñ') {
+                enviarLetra(letra);
+            }
+        });
+    </script>
+</body>
+</html>

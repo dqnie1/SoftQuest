@@ -28,7 +28,7 @@ def mapa_mundos(request):
         act_completadas = ProgresoActividad.objects.filter(
             usuario=usuario,
             actividad__in=actividades,
-            estado='completado'
+            estado__in=['completado', 'completada']
         ).count()
         
         es_completado = (total_act > 0 and act_completadas == total_act)
@@ -44,6 +44,7 @@ def mapa_mundos(request):
         else:
             mundo.estado = 'bloqueado'
             mundo.prereq = Mundo.objects.filter(orden__lt=mundo.orden).order_by('-orden').first()
+            
 
     from contenido.models import InsigniaUsuario
     insignias_count = InsigniaUsuario.objects.filter(usuario=usuario).count()
@@ -85,7 +86,7 @@ def temario_mundo(request, mundo_id):
     # Check progress for activities
     for idx, act in enumerate(actividades):
         progreso = ProgresoActividad.objects.filter(usuario=usuario, actividad=act).first()
-        if progreso and progreso.estado == 'completado':
+        if progreso and progreso.estado in ('completado', 'completada'):
             act.estado = 'completado'
             act.puntaje_obtenido = progreso.puntaje or 0
             xp_acumulado += progreso.puntaje or 0
@@ -141,6 +142,36 @@ def temario_mundo(request, mundo_id):
             except Exception:
                 act.url = f'/cubecode/{act.id}/'
             act.tipo_display = 'CubeCode'
+        elif tipo_normalizado in ('ninjacode', 'ninja_code', 'ninja'):
+            try:
+                act.url = reverse('ninjacode:jugar', kwargs={'actividad_id': act.id})
+            except Exception:
+                act.url = f'/ninjacode/{act.id}/'
+            act.tipo_display = 'NinjaCode'
+        elif tipo_normalizado == 'ahorcado':
+            try:
+                act.url = reverse('ahorcado:detalle', kwargs={'actividad_id': act.id})
+            except Exception:
+                act.url = f'/ahorcado/{act.id}/'
+            act.tipo_display = 'Ahorcado'
+        elif tipo_normalizado == 'crucigrama':
+            try:
+                act.url = reverse('crucigrama:jugar', kwargs={'actividad_id': act.id})
+            except Exception:
+                act.url = f'/crucigrama/{act.id}/'
+            act.tipo_display = 'Crucigrama'
+        elif tipo_normalizado in ('codebreaker', 'codebreak'):
+            try:
+                act.url = reverse('codebreaker:jugar', kwargs={'actividad_id': act.id})
+            except Exception:
+                act.url = f'/codebreaker/{act.id}/'
+            act.tipo_display = 'CodeBreaker'
+        elif tipo_normalizado in ('sopaletras', 'sopa_letras', 'sopa'):
+            try:
+                act.url = reverse('sopaletras:jugar', kwargs={'actividad_id': act.id})
+            except Exception:
+                act.url = f'/sopaletras/{act.id}/'
+            act.tipo_display = 'Sopa de letras'
         else:
             act.url = ''
             act.tipo_display = act.tipo or 'Actividad'
