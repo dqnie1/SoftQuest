@@ -9,7 +9,7 @@ class ProgresoActividad(models.Model):
     Tabla de resultados: PROGRESO_ACTIVIDAD.
     Relación USUARIO 'registra' (1:N) y ACTIVIDAD 'es_evaluada_en' (1:N).
     Mapeada como managed = False pues la tabla pertenece al esquema base de la plataforma.
-    Valores permitidos de estado: 'en_progreso', 'completada', 'no_completada'.
+    Valores permitidos de estado: 'en_progreso', 'completado', 'no_completado'.
     """
     id = models.AutoField(primary_key=True)
     usuario = models.ForeignKey(
@@ -47,7 +47,7 @@ class ProgresoActividad(models.Model):
         si ya existe, actualiza y suma a intentos si inicia partida o si se especifica).
         
         resultado: dict con claves opcionales:
-          - 'estado': 'en_progreso', 'completada', 'no_completada'
+          - 'estado': 'en_progreso', 'completado', 'no_completado'
           - 'puntaje': int
           - 'fecha_inicio': datetime
           - 'fecha_completado': datetime

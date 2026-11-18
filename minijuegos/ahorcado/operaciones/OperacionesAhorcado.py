@@ -49,7 +49,7 @@ def calcular_puntaje(puntos_max: int, fallos_cometidos: int, pistas_usadas: int,
     POST-02: Calificación obtenida calculada por una función aislada y configurable.
     Tope: ACTIVIDAD.puntos_max (100 xp, RN-G01).
     Fórmula: puntos_max base, menos 10 por fallo cometido y 5 por pista única usada (máx 3 pistas penalizadas).
-    Mínimo: 0. Si pierde, se aplica la misma función y el estado es 'no_completada'.
+    Mínimo: 0. Si pierde, se aplica la misma función y el estado es 'no_completado'.
     """
     base = puntos_max if (puntos_max is not None and puntos_max > 0) else 100
     pistas_penalizables = min(3, max(0, pistas_usadas))
@@ -491,7 +491,7 @@ class OperacionesAhorcado:
             id_usuario=usuario.id,
             id_actividad=actividad_id,
             resultado={
-                'estado': 'no_completada',
+                'estado': 'no_completado',
                 'puntaje': puntaje,
                 'fecha_completado': timezone.now(),
             }
@@ -528,7 +528,7 @@ class OperacionesAhorcado:
         puntos_max = partida.get('puntos_max', 100)
 
         puntaje = calcular_puntaje(puntos_max, fallos_cometidos, pistas_usadas, gano=gano)
-        estado_final = 'completada' if gano else 'no_completada'
+        estado_final = 'completado' if gano else 'no_completado'
         ahora = timezone.now()
 
         ProgresoActividad.guardarProgresoActividad(

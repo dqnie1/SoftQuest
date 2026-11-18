@@ -125,7 +125,7 @@ class OperacionesAhorcadoTestCase(TestCase):
         self.assertEqual(res_fin['palabra_revelada'], 'PYTHON')
 
         progreso.refresh_from_db()
-        self.assertEqual(progreso.estado, 'completada')
+        self.assertEqual(progreso.estado, 'completado')
         self.assertEqual(progreso.puntaje, 100)
         self.assertIsNotNone(progreso.fecha_completado)
 
@@ -195,7 +195,7 @@ class OperacionesAhorcadoTestCase(TestCase):
             usuario_id=self.usuario.id,
             actividad_id=self.actividad_ahorcado.id
         )
-        self.assertEqual(progreso.estado, 'no_completada')
+        self.assertEqual(progreso.estado, 'no_completado')
         self.assertEqual(progreso.puntaje, 40)
         self.assertIsNotNone(progreso.fecha_completado)
 
@@ -210,7 +210,7 @@ class OperacionesAhorcadoTestCase(TestCase):
             usuario_id=self.usuario.id,
             actividad_id=self.actividad_ahorcado.id
         )
-        self.assertEqual(progreso.estado, 'no_completada')
+        self.assertEqual(progreso.estado, 'no_completado')
         self.assertIsNotNone(progreso.fecha_completado)
 
     def test_excepcion_1_0_e1_error_de_carga_sin_palabras(self):
@@ -238,7 +238,7 @@ class OperacionesAhorcadoTestCase(TestCase):
         ProgresoActividad.objects.create(
             usuario=self.usuario,
             actividad=self.actividad_previa,
-            estado='completada',
+            estado='completado',
             puntaje=100,
             intentos=1
         )
@@ -249,7 +249,7 @@ class OperacionesAhorcadoTestCase(TestCase):
         ProgresoActividad.objects.create(
             usuario=self.usuario,
             actividad=self.actividad_previa,
-            estado='completada',
+            estado='completado',
             puntaje=100
         )
 
